@@ -1,0 +1,50 @@
+.dropzone {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 72px 32px;
+	border: 2px dashed var(--color-border);
+	border-radius: var(--radius-lg);
+	cursor: pointer;
+	transition:
+		border-color 0.2s,
+		background 0.2s;
+	outline: none;
+}
+
+.dropzone:hover,
+.dropzone:focus-visible {
+	border-color: var(--color-accent);
+	background: rgba(41, 128, 185, 0.03);
+}
+
+.dropzoneDragging {
+	border-color: var(--color-accent);
+	background: rgba(41, 128, 185, 0.06);
+}
+
+.dropzoneIcon {
+	color: var(--color-accent);
+	opacity: 0.7;
+}
+
+.dropzoneText {
+	font-size: 15px;
+	color: var(--color-text-muted);
+	text-align: center;
+}
+
+.dropzoneLink {
+	color: var(--color-accent);
+	font-weight: 500;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.dropzoneHint {
+	font-size: 12px;
+	color: var(--color-text-muted);
+	opacity: 0.7;
+}

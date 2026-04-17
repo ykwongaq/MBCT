@@ -1,0 +1,30 @@
+.actions {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.estimateBtn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 20px;
+	font-size: 14px;
+	font-weight: 500;
+	color: #fff;
+	background: var(--color-primary);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
+	transition:
+		background 0.2s,
+		transform 0.1s,
+		box-shadow 0.2s;
+}
+
+.estimateBtn:hover {
+	background: var(--color-accent);
+	box-shadow: var(--shadow-md);
+}
+
+.estimateBtn:active {
+	transform: translateY(1px);
+}

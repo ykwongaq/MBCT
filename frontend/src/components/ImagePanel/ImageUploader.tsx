@@ -7,13 +7,14 @@ import type { Image as AppImage } from "../../types/Image";
 import type { BBox } from "../../types/BBox";
 import ImageSlideShow from "./ImageSlideShow";
 import ImageCollectionBar from "./ImageCollectionBar";
+import ImageDropArea from "./ImageDropArea";
+import EstimateButton from "./EstimateButton";
 
 function ImageUploader() {
 	const { projectState, projectDispatch } = useProject();
 	const { annotationSessionState, annotationSessionDispatch } =
 		useAnnotationSession();
 
-	const [isDragging, setIsDragging] = useState(false);
 	const [messageBoxOpen, setMessageBoxOpen] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,12 +98,6 @@ function ImageUploader() {
 		e.target.value = "";
 	};
 
-	const handleDrop = (e: React.DragEvent) => {
-		e.preventDefault();
-		setIsDragging(false);
-		addFiles(e.dataTransfer.files);
-	};
-
 	const goToIndex = (index: number) => {
 		if (index >= 0 && index < dataList.length) {
 			annotationSessionDispatch({
@@ -136,43 +131,10 @@ function ImageUploader() {
 
 			<div className={styles.card}>
 				{dataList.length === 0 ? (
-					<div
-						className={`${styles.dropzone} ${isDragging ? styles.dropzoneDragging : ""}`}
-						onDrop={handleDrop}
-						onDragOver={(e) => {
-							e.preventDefault();
-							setIsDragging(true);
-						}}
-						onDragLeave={() => setIsDragging(false)}
-						onClick={() => fileInputRef.current?.click()}
-						role="button"
-						tabIndex={0}
-						onKeyDown={(e) =>
-							e.key === "Enter" && fileInputRef.current?.click()
-						}
-					>
-						<div className={styles.dropzoneIcon}>
-							<svg
-								width="44"
-								height="44"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="1.5"
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							>
-								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-								<polyline points="17 8 12 3 7 8" />
-								<line x1="12" y1="3" x2="12" y2="15" />
-							</svg>
-						</div>
-						<p className={styles.dropzoneText}>
-							Drop images here, or{" "}
-							<span className={styles.dropzoneLink}>browse files</span>
-						</p>
-						<p className={styles.dropzoneHint}>PNG, JPG, TIFF supported</p>
-					</div>
+					<ImageDropArea
+						fileInputRef={fileInputRef}
+						onDropFiles={addFiles}
+					/>
 				) : (
 					<div className={styles.viewer}>
 						<ImageSlideShow
@@ -193,34 +155,15 @@ function ImageUploader() {
 			</div>
 
 			{dataList.length > 0 && (
-				<div className={styles.actions}>
-					<button
-						className={styles.estimateBtn}
-						onClick={() => {
-							const currentData = dataList.find((d) => d.id === currentImageId);
-							if (!currentData?.bbox) {
-								setMessageBoxOpen(true);
-								return;
-							}
-						}}
-					>
-						<svg
-							width="18"
-							height="18"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<line x1="18" y1="20" x2="18" y2="10" />
-							<line x1="12" y1="20" x2="12" y2="4" />
-							<line x1="6" y1="20" x2="6" y2="14" />
-						</svg>
-						Estimate
-					</button>
-				</div>
+				<EstimateButton
+					onClick={() => {
+						const currentData = dataList.find((d) => d.id === currentImageId);
+						if (!currentData?.bbox) {
+							setMessageBoxOpen(true);
+							return;
+						}
+					}}
+				/>
 			)}
 
 			<input
