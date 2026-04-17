@@ -1,0 +1,90 @@
+.mainRow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 24px;
+  background: #f7f9fc;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Navigation buttons */
+.navBtn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.navBtn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+/* Main image */
+.mainImageWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.imageInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  max-width: 100%;
+}
+
+.imageName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.imageCounter {
+  flex-shrink: 0;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 100px;
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
+.removeBtn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text-muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.removeBtn:hover {
+  background: #fdecea;
+  color: #c0392b;
+}

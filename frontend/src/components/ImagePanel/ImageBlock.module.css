@@ -1,0 +1,20 @@
+.imageBlock {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.mainImage {
+  max-width: 100%;
+  max-height: 460px;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  display: block;
+}
+
+.svgOverlay {
+  position: absolute;
+  cursor: crosshair;
+  touch-action: none;
+}
