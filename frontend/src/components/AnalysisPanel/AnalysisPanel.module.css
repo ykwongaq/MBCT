@@ -1,0 +1,37 @@
+.panel {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	height: 100%;
+	box-sizing: border-box;
+}
+
+.panelHeader {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.panelTitle {
+	font-size: 22px;
+	font-weight: 600;
+	color: var(--color-text);
+	margin: 0;
+}
+
+.panelDesc {
+	font-size: 14px;
+	color: var(--color-text-muted);
+	margin: 0;
+	line-height: 1.5;
+}
+
+.viewerWrap {
+	flex: 1;
+	min-height: 260px;
+}
+
+.reportWrap {
+	flex-shrink: 0;
+}

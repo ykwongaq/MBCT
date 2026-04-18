@@ -10,7 +10,11 @@ import ImageCollectionBar from "./ImageCollectionBar";
 import ImageDropArea from "./ImageDropArea";
 import EstimateButton from "./EstimateButton";
 
-function ImageUploader() {
+interface Props {
+	onEstimate?: () => void;
+}
+
+function ImageUploader({ onEstimate }: Props) {
 	const { projectState, projectDispatch } = useProject();
 	const { annotationSessionState, annotationSessionDispatch } =
 		useAnnotationSession();
@@ -162,6 +166,7 @@ function ImageUploader() {
 							setMessageBoxOpen(true);
 							return;
 						}
+						onEstimate?.();
 					}}
 				/>
 			)}
