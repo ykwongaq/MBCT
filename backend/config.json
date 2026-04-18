@@ -1,0 +1,3 @@
+{
+    "depth_anything_v2_vkitti_path": "checkpoints/DepthAnythingV2/depth_anything_v2_metric_vkitti_vitl.pth"
+}

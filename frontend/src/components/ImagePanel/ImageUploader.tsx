@@ -128,17 +128,14 @@ function ImageUploader({ onEstimate }: Props) {
 				<h2 className={styles.sectionTitle}>Image Analysis</h2>
 				<p className={styles.sectionDesc}>
 					Upload top-down vertical images of benthic habitats to estimate
-					structural complexity metrics. You may drag the bounding box to adjust
-					the area of interest.
+					structural complexity metrics. <br /> You a drag the bounding box to
+					adjust the area of interest.
 				</p>
 			</div>
 
 			<div className={styles.card}>
 				{dataList.length === 0 ? (
-					<ImageDropArea
-						fileInputRef={fileInputRef}
-						onDropFiles={addFiles}
-					/>
+					<ImageDropArea fileInputRef={fileInputRef} onDropFiles={addFiles} />
 				) : (
 					<div className={styles.viewer}>
 						<ImageSlideShow
