@@ -1,3 +1,4 @@
+import numpy as np
 from server.models.depth_anything_model import DepthAnythingV2VKittiModel
 from server.utils.path import resolve_path
 
@@ -12,3 +13,6 @@ class Server:
         self.depth_anything_v2_vkitti_model = DepthAnythingV2VKittiModel(
             depth_anything_v2_vkitti_path
         )
+
+    def predict_depth(self, image: np.ndarray) -> np.ndarray:
+        return self.depth_anything_v2_vkitti_model.infer_image(image)

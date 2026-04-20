@@ -1,180 +1,299 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
 import styles from "./PointCloudViewer.module.css";
+import type { DepthMap } from "../../types/DepthMap";
+import type { BBox } from "../../types/BBox";
 
-const POINT_COUNT = 2000;
+export interface PointCloudViewerHandle {
+	reset: () => void;
+}
 
-function generatePoints(): Float32Array {
-	const pts = new Float32Array(POINT_COUNT * 3);
-	for (let i = 0; i < POINT_COUNT; i++) {
-		const phi = Math.random() * Math.PI * 2;
-		const r = Math.sqrt(Math.random());
-		const x = r * Math.cos(phi);
-		const z = r * Math.sin(phi);
-		const dome = Math.sqrt(Math.max(0, 1 - r * r));
-		const noise = (Math.random() - 0.5) * 0.18;
-		pts[i * 3] = x * 0.85;
-		pts[i * 3 + 1] = Math.max(-0.1, dome * 0.75 + noise);
-		pts[i * 3 + 2] = z * 0.85;
+interface Props {
+	depthMap?: DepthMap;
+	imageUrl?: string;
+	bbox?: BBox;
+}
+
+function buildPointCloudGeometry(depthMap: DepthMap): THREE.BufferGeometry {
+	const { data, width, height } = depthMap;
+
+	let min = Infinity;
+	let max = -Infinity;
+	for (let i = 0; i < data.length; i++) {
+		if (data[i] < min) min = data[i];
+		if (data[i] > max) max = data[i];
 	}
-	return pts;
+	const range = max - min || 1;
+
+	const positions = new Float32Array(width * height * 3);
+
+	for (let row = 0; row < height; row++) {
+		for (let col = 0; col < width; col++) {
+			const i = row * width + col;
+			const depth = 1 - (data[i] - min) / range;
+			positions[i * 3] = (col / (width - 1)) * 2 - 1;
+			positions[i * 3 + 1] = depth * 0.8;
+			positions[i * 3 + 2] = (row / (height - 1)) * 2 - 1;
+		}
+	}
+
+	const geo = new THREE.BufferGeometry();
+	geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+	return geo;
 }
 
-// Gradient: #1a5276 (base) → #48c9b0 (peak), matching the header palette
-function lerpColor(t: number): string {
-	const tc = Math.max(0, Math.min(1, t));
-	const r = Math.round(26 + (72 - 26) * tc);
-	const g = Math.round(82 + (201 - 82) * tc);
-	const b = Math.round(118 + (176 - 118) * tc);
-	return `rgb(${r},${g},${b})`;
+function buildPlaceholderPointCloudGeometry(): THREE.BufferGeometry {
+	const res = 60;
+	const positions = new Float32Array(res * res * 3);
+
+	for (let row = 0; row < res; row++) {
+		for (let col = 0; col < res; col++) {
+			const i = row * res + col;
+			const x = (col / (res - 1)) * 2 - 1;
+			const z = (row / (res - 1)) * 2 - 1;
+			const r = Math.sqrt(x * x + z * z);
+			const y = Math.max(0, Math.sqrt(Math.max(0, 1 - r * r))) * 0.5;
+			positions[i * 3] = x * 0.85;
+			positions[i * 3 + 1] = y;
+			positions[i * 3 + 2] = z * 0.85;
+		}
+	}
+
+	const geo = new THREE.BufferGeometry();
+	geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+	return geo;
 }
 
-function PointCloudViewer() {
-	const canvasRef = useRef<HTMLCanvasElement>(null);
-	const wrapRef = useRef<HTMLDivElement>(null);
-	const rotYRef = useRef(0.3);
-	const rotXRef = useRef(-0.38);
-	const isDragRef = useRef(false);
-	const isPanRef = useRef(false);
-	const lastPtRef = useRef({ x: 0, y: 0 });
-	const animRef = useRef<number>(0);
-	const ptsRef = useRef<Float32Array>(generatePoints());
-	const zoomRef = useRef(1.0);
-	const panXRef = useRef(0);
-	const panYRef = useRef(0);
+interface SceneProps {
+	depthMap?: DepthMap;
+	imageUrl?: string;
+	bbox?: BBox;
+	rotXRef: React.RefObject<number>;
+	rotYRef: React.RefObject<number>;
+	zoomRef: React.RefObject<number>;
+	panXRef: React.RefObject<number>;
+	panYRef: React.RefObject<number>;
+	isDragRef: React.RefObject<boolean>;
+	isPanRef: React.RefObject<boolean>;
+}
+
+function createCircleTexture(): THREE.Texture {
+	const size = 64;
+	const canvas = document.createElement("canvas");
+	canvas.width = size;
+	canvas.height = size;
+	const ctx = canvas.getContext("2d")!;
+	ctx.beginPath();
+	ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+	ctx.fillStyle = "#ffffff";
+	ctx.fill();
+	const texture = new THREE.CanvasTexture(canvas);
+	texture.needsUpdate = true;
+	return texture;
+}
+
+function Scene({
+	depthMap,
+	imageUrl,
+	bbox,
+	rotXRef,
+	rotYRef,
+	zoomRef,
+	panXRef,
+	panYRef,
+	isDragRef,
+	isPanRef,
+}: SceneProps) {
+	const matRef = useRef<THREE.PointsMaterial>(null);
+	const { camera } = useThree();
+	const circleTexture = useMemo(() => createCircleTexture(), []);
+
+	const geo = useMemo(
+		() =>
+			depthMap
+				? buildPointCloudGeometry(depthMap)
+				: buildPlaceholderPointCloudGeometry(),
+		[depthMap],
+	);
 
 	useEffect(() => {
-		const canvas = canvasRef.current!;
-		const wrap = wrapRef.current!;
+		const mat = matRef.current;
+		if (!mat) return;
 
-		const resize = () => {
-			const dpr = window.devicePixelRatio || 1;
-			canvas.width = wrap.clientWidth * dpr;
-			canvas.height = wrap.clientHeight * dpr;
-		};
-		resize();
-		const ro = new ResizeObserver(resize);
-		ro.observe(wrap);
+		if (!depthMap || !imageUrl || !bbox) {
+			if (geo.hasAttribute("color")) geo.deleteAttribute("color");
+			mat.vertexColors = false;
+			mat.color.set(0x48c9b0);
+			mat.needsUpdate = true;
+			return;
+		}
 
-		const render = () => {
-			const ctx = canvas.getContext("2d")!;
-			const dpr = window.devicePixelRatio || 1;
-			const W = canvas.width / dpr;
-			const H = canvas.height / dpr;
-			ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-			ctx.clearRect(0, 0, W, H);
-
-			const cx = W / 2 + panXRef.current;
-			const cy = H / 2 + panYRef.current;
-			const scale = Math.min(W, H) * 0.42 * zoomRef.current;
-			const fov = 2.8;
-			const cosRY = Math.cos(rotYRef.current);
-			const sinRY = Math.sin(rotYRef.current);
-			const cosRX = Math.cos(rotXRef.current);
-			const sinRX = Math.sin(rotXRef.current);
-
-			const pts = ptsRef.current;
-			const projected: {
-				sx: number;
-				sy: number;
-				depth: number;
-				t: number;
-			}[] = [];
-
-			for (let i = 0; i < POINT_COUNT; i++) {
-				const px = pts[i * 3];
-				const py = pts[i * 3 + 1];
-				const pz = pts[i * 3 + 2];
-
-				const rx1 = px * cosRY + pz * sinRY;
-				const rz1 = -px * sinRY + pz * cosRY;
-				const ry1 = py * cosRX - rz1 * sinRX;
-				const rz2 = py * sinRX + rz1 * cosRX;
-
-				const d = fov / (fov + rz2 + 1.5);
-				projected.push({
-					sx: cx + rx1 * d * scale,
-					sy: cy - ry1 * d * scale,
-					depth: rz2,
-					t: (pts[i * 3 + 1] + 0.1) / 0.85,
-				});
+		const img = new window.Image();
+		img.onload = () => {
+			const offscreen = document.createElement("canvas");
+			offscreen.width = depthMap.width;
+			offscreen.height = depthMap.height;
+			const ctx = offscreen.getContext("2d")!;
+			ctx.drawImage(
+				img,
+				Math.round(bbox.x_top_left),
+				Math.round(bbox.y_top_left),
+				Math.round(bbox.width),
+				Math.round(bbox.height),
+				0,
+				0,
+				depthMap.width,
+				depthMap.height,
+			);
+			const imageData = ctx.getImageData(0, 0, depthMap.width, depthMap.height);
+			const colors = new Float32Array(depthMap.width * depthMap.height * 3);
+			for (let i = 0; i < depthMap.width * depthMap.height; i++) {
+				colors[i * 3] = (imageData.data[i * 4] / 255) * 0.75;
+				colors[i * 3 + 1] = (imageData.data[i * 4 + 1] / 255) * 0.75;
+				colors[i * 3 + 2] = (imageData.data[i * 4 + 2] / 255) * 0.75;
 			}
-
-			projected.sort((a, b) => a.depth - b.depth);
-
-			for (const p of projected) {
-				const d = fov / (fov + p.depth + 1.5);
-				ctx.globalAlpha = 0.45 + d * 0.55;
-				ctx.fillStyle = lerpColor(p.t);
-				ctx.beginPath();
-				ctx.arc(p.sx, p.sy, Math.max(0.7, d * 2.6), 0, Math.PI * 2);
-				ctx.fill();
+			geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+			if (matRef.current) {
+				matRef.current.vertexColors = true;
+				matRef.current.color.set(0xffffff);
+				matRef.current.needsUpdate = true;
 			}
-			ctx.globalAlpha = 1;
 		};
+		img.src = imageUrl;
+	}, [depthMap, imageUrl, bbox, geo]);
 
-		const animate = () => {
-			if (!isDragRef.current && !isPanRef.current) {
-				rotYRef.current += 0.004;
-			}
-			render();
-			animRef.current = requestAnimationFrame(animate);
-		};
-		animRef.current = requestAnimationFrame(animate);
+	useFrame(() => {
+		if (!isDragRef.current && !isPanRef.current) {
+			rotYRef.current += 0.004;
+		}
+		const r = zoomRef.current;
+		const panSensitivity = 0.003 * r;
+		const px = panXRef.current * panSensitivity;
+		const py = panYRef.current * -panSensitivity;
 
-		const onWheel = (e: WheelEvent) => {
-			e.preventDefault();
-			const factor = e.deltaY > 0 ? 0.95 : 1.05;
-			zoomRef.current = Math.max(0.3, Math.min(5.0, zoomRef.current * factor));
-		};
-		wrap.addEventListener("wheel", onWheel, { passive: false });
+		// Base camera position (no pan)
+		const baseX = Math.sin(rotYRef.current) * Math.cos(rotXRef.current) * r;
+		const baseY = Math.sin(-rotXRef.current) * r + 0.3;
+		const baseZ = Math.cos(rotYRef.current) * Math.cos(rotXRef.current) * r;
 
-		return () => {
-			cancelAnimationFrame(animRef.current);
-			ro.disconnect();
-			wrap.removeEventListener("wheel", onWheel);
-		};
-	}, []);
+		// Forward vector (from base camera position toward orbit center)
+		const fx = -baseX;
+		const fy = -(baseY - 0.3);
+		const fz = -baseZ;
+		const flen = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1;
+		const nfx = fx / flen;
+		const nfy = fy / flen;
+		const nfz = fz / flen;
 
-	const onMouseDown = (e: React.MouseEvent) => {
-		if (e.button === 2) {
-			isPanRef.current = true;
+		// Right vector = normalize(forward × worldUp)
+		let rx = -nfz;
+		let ry = 0;
+		let rz = nfx;
+		const rlen = Math.sqrt(rx * rx + ry * ry + rz * rz);
+		if (rlen < 1e-6) {
+			rx = 1;
+			ry = 0;
+			rz = 0;
 		} else {
-			isDragRef.current = true;
+			rx /= rlen;
+			ry /= rlen;
+			rz /= rlen;
 		}
-		lastPtRef.current = { x: e.clientX, y: e.clientY };
-	};
-	const onMouseMove = (e: React.MouseEvent) => {
-		const dx = e.clientX - lastPtRef.current.x;
-		const dy = e.clientY - lastPtRef.current.y;
-		if (isPanRef.current) {
-			panXRef.current += dx;
-			panYRef.current += dy;
-		} else if (isDragRef.current) {
-			rotYRef.current -= dx * 0.008;
-			rotXRef.current = Math.max(-1.2, Math.min(0.5, rotXRef.current - dy * 0.008));
-		}
-		lastPtRef.current = { x: e.clientX, y: e.clientY };
-	};
-	const onMouseUp = () => {
-		isDragRef.current = false;
-		isPanRef.current = false;
-	};
 
-	const onReset = () => {
-		rotYRef.current = 0.3;
-		rotXRef.current = -0.38;
-		zoomRef.current = 1.0;
-		panXRef.current = 0;
-		panYRef.current = 0;
-	};
+		// Up vector = right × forward
+		const ux = ry * nfz - rz * nfy;
+		const uy = rz * nfx - rx * nfz;
+		const uz = rx * nfy - ry * nfx;
+
+		const panX = rx * px + ux * py;
+		const panY = ry * px + uy * py;
+		const panZ = rz * px + uz * py;
+
+		camera.position.x = baseX + panX;
+		camera.position.y = baseY + panY;
+		camera.position.z = baseZ + panZ;
+		camera.lookAt(panX, 0.3 + panY, panZ);
+	});
 
 	return (
-		<div className={styles.viewer}>
-			<div className={styles.header}>
-				<span className={styles.title}>Point Cloud</span>
-				<span className={styles.hint}>Left drag: rotate · Right drag: pan · Scroll: zoom</span>
-				<button className={styles.resetBtn} onClick={onReset}>Reset</button>
-			</div>
+		<points geometry={geo}>
+			<pointsMaterial
+				ref={matRef}
+				color={0x48c9b0}
+				size={0.02}
+				sizeAttenuation
+				map={circleTexture}
+				transparent
+				alphaTest={0.5}
+			/>
+		</points>
+	);
+}
+
+const PointCloudViewer = forwardRef<PointCloudViewerHandle, Props>(
+	function PointCloudViewer({ depthMap, imageUrl, bbox }, ref) {
+		const wrapRef = useRef<HTMLDivElement>(null);
+		const isDragRef = useRef(false);
+		const isPanRef = useRef(false);
+		const lastPtRef = useRef({ x: 0, y: 0 });
+		const rotYRef = useRef(0.3);
+		const rotXRef = useRef(-0.38);
+		const zoomRef = useRef(3.2);
+		const panXRef = useRef(0);
+		const panYRef = useRef(0);
+
+		useImperativeHandle(ref, () => ({
+			reset() {
+				rotYRef.current = 0.3;
+				rotXRef.current = -0.38;
+				zoomRef.current = 3.2;
+				panXRef.current = 0;
+				panYRef.current = 0;
+			},
+		}));
+
+		useEffect(() => {
+			const wrap = wrapRef.current!;
+			const onWheel = (e: WheelEvent) => {
+				e.preventDefault();
+				zoomRef.current = Math.max(
+					0.5,
+					Math.min(8.0, zoomRef.current * (e.deltaY > 0 ? 1.05 : 0.95)),
+				);
+			};
+			wrap.addEventListener("wheel", onWheel, { passive: false });
+			return () => wrap.removeEventListener("wheel", onWheel);
+		}, []);
+
+		const onMouseDown = (e: React.MouseEvent) => {
+			if (e.button === 2) isPanRef.current = true;
+			else isDragRef.current = true;
+			lastPtRef.current = { x: e.clientX, y: e.clientY };
+		};
+
+		const onMouseMove = (e: React.MouseEvent) => {
+			const dx = e.clientX - lastPtRef.current.x;
+			const dy = e.clientY - lastPtRef.current.y;
+			if (isPanRef.current) {
+				panXRef.current -= dx;
+				panYRef.current -= dy;
+			} else if (isDragRef.current) {
+				rotYRef.current -= dx * 0.008;
+				rotXRef.current = Math.max(
+					-1.2,
+					Math.min(0.5, rotXRef.current - dy * 0.008),
+				);
+			}
+			lastPtRef.current = { x: e.clientX, y: e.clientY };
+		};
+
+		const onMouseUp = () => {
+			isDragRef.current = false;
+			isPanRef.current = false;
+		};
+
+		return (
 			<div
 				ref={wrapRef}
 				className={styles.canvasWrap}
@@ -184,10 +303,28 @@ function PointCloudViewer() {
 				onMouseLeave={onMouseUp}
 				onContextMenu={(e) => e.preventDefault()}
 			>
-				<canvas ref={canvasRef} className={styles.canvas} />
+				<Canvas
+					style={{ position: "absolute", inset: 0 }}
+					frameloop="always"
+					camera={{ position: [0, 1.5, 3.2], fov: 45, near: 0.01, far: 100 }}
+					gl={{ antialias: true, alpha: true }}
+				>
+					<Scene
+						depthMap={depthMap}
+						imageUrl={imageUrl}
+						bbox={bbox}
+						rotXRef={rotXRef}
+						rotYRef={rotYRef}
+						zoomRef={zoomRef}
+						panXRef={panXRef}
+						panYRef={panYRef}
+						isDragRef={isDragRef}
+						isPanRef={isPanRef}
+					/>
+				</Canvas>
 			</div>
-		</div>
-	);
-}
+		);
+	},
+);
 
 export default PointCloudViewer;

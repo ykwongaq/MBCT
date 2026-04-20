@@ -1,7 +1,9 @@
-import PointCloudViewer from "./PointCloudViewer";
+import ModelViewer from "./ModelViewer";
 import AnalysisReport from "./AnalysisReport";
 import styles from "./AnalysisPanel.module.css";
 import type { Statistic } from "../../types/Statistic";
+import { useProject } from "../../contexts/ProjectContext";
+import { useAnnotationSession } from "../../contexts/AnnotationSessionContext";
 
 const DEFAULT_STATS: Statistic = {
 	rugosity: 1.342,
@@ -10,6 +12,13 @@ const DEFAULT_STATS: Statistic = {
 };
 
 function AnalysisPanel() {
+	const { projectState } = useProject();
+	const { annotationSessionState } = useAnnotationSession();
+
+	const currentData = projectState.dataList.find(
+		(d) => d.id === annotationSessionState.currentImageId,
+	);
+
 	return (
 		<section className={styles.panel}>
 			<div className={styles.panelHeader}>
@@ -20,7 +29,11 @@ function AnalysisPanel() {
 				</p>
 			</div>
 			<div className={styles.viewerWrap}>
-				<PointCloudViewer />
+				<ModelViewer
+					depthMap={currentData?.depthMap}
+					imageUrl={currentData?.image.imageUrl}
+					bbox={currentData?.bbox}
+				/>
 			</div>
 			<div className={styles.reportWrap}>
 				<AnalysisReport stats={DEFAULT_STATS} />

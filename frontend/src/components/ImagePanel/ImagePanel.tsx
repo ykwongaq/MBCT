@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import MessageBox from "../../components/common/MessageBox/MessageBox";
-import styles from "./ImageUploader.module.css";
+import ErrorBox from "../../components/common/MessageBox/ErrorBox";
+import styles from "./ImagePanel.module.css";
 import { useProject } from "../../contexts/ProjectContext";
 import { useAnnotationSession } from "../../contexts/AnnotationSessionContext";
 import type { Image as AppImage } from "../../types/Image";
@@ -9,17 +10,58 @@ import ImageSlideShow from "./ImageSlideShow";
 import ImageCollectionBar from "./ImageCollectionBar";
 import ImageDropArea from "./ImageDropArea";
 import EstimateButton from "./EstimateButton";
+import { estimateDepth } from "../../services/DepthPredictionService";
 
 interface Props {
 	onEstimate?: () => void;
 }
 
-function ImageUploader({ onEstimate }: Props) {
+function cropImage(imageUrl: string, bbox: BBox): Promise<Blob> {
+	return new Promise((resolve, reject) => {
+		const img = new window.Image();
+		img.onload = () => {
+			const canvas = document.createElement("canvas");
+			canvas.width = Math.round(bbox.width);
+			canvas.height = Math.round(bbox.height);
+			const ctx = canvas.getContext("2d");
+			if (!ctx) {
+				reject(new Error("No canvas context"));
+				return;
+			}
+			ctx.drawImage(
+				img,
+				Math.round(bbox.x_top_left),
+				Math.round(bbox.y_top_left),
+				Math.round(bbox.width),
+				Math.round(bbox.height),
+				0,
+				0,
+				Math.round(bbox.width),
+				Math.round(bbox.height),
+			);
+			canvas.toBlob(
+				(blob) => {
+					if (blob) resolve(blob);
+					else reject(new Error("Canvas toBlob failed"));
+				},
+				"image/jpeg",
+				0.95,
+			);
+		};
+		img.onerror = reject;
+		img.src = imageUrl;
+	});
+}
+
+function ImagePanel({ onEstimate }: Props) {
 	const { projectState, projectDispatch } = useProject();
 	const { annotationSessionState, annotationSessionDispatch } =
 		useAnnotationSession();
 
 	const [messageBoxOpen, setMessageBoxOpen] = useState(false);
+	const [errorBoxOpen, setErrorBoxOpen] = useState(false);
+	const [errorMessage, setErrorMessage] = useState("");
+	const [isEstimating, setIsEstimating] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const dataList = projectState.dataList;
@@ -122,6 +164,42 @@ function ImageUploader({ onEstimate }: Props) {
 		projectDispatch({ type: "SET_BBOX", payload: { id, bbox } });
 	};
 
+	const handleEstimate = async () => {
+		const currentData = dataList.find((d) => d.id === currentImageId);
+		if (!currentData?.bbox) {
+			setMessageBoxOpen(true);
+			return;
+		}
+
+		setIsEstimating(true);
+		try {
+			const blob = await cropImage(
+				currentData.image.imageUrl,
+				currentData.bbox,
+			);
+			estimateDepth(blob, {
+				onComplete: (depthMap) => {
+					projectDispatch({
+						type: "SET_DEPTH_MAP",
+						payload: { id: currentImageId!, depthMap },
+					});
+					setIsEstimating(false);
+					onEstimate?.();
+				},
+				onError: (error) => {
+					setErrorMessage(error.message || "Depth estimation failed.");
+					setErrorBoxOpen(true);
+					setIsEstimating(false);
+				},
+			});
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : "Failed to crop image.";
+			setErrorMessage(msg);
+			setErrorBoxOpen(true);
+			setIsEstimating(false);
+		}
+	};
+
 	return (
 		<section className={styles.section}>
 			<div className={styles.sectionHeader}>
@@ -156,16 +234,7 @@ function ImageUploader({ onEstimate }: Props) {
 			</div>
 
 			{dataList.length > 0 && (
-				<EstimateButton
-					onClick={() => {
-						const currentData = dataList.find((d) => d.id === currentImageId);
-						if (!currentData?.bbox) {
-							setMessageBoxOpen(true);
-							return;
-						}
-						onEstimate?.();
-					}}
-				/>
+				<EstimateButton onClick={handleEstimate} loading={isEstimating} />
 			)}
 
 			<input
@@ -183,8 +252,15 @@ function ImageUploader({ onEstimate }: Props) {
 				message="Please drag a bounding box on the current image before continuing."
 				onClose={() => setMessageBoxOpen(false)}
 			/>
+
+			<ErrorBox
+				open={errorBoxOpen}
+				title="Estimation failed"
+				message={errorMessage}
+				onClose={() => setErrorBoxOpen(false)}
+			/>
 		</section>
 	);
 }
 
-export default ImageUploader;
+export default ImagePanel;

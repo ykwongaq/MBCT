@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Header from "./components/Header/Header";
-import ImageUploader from "./components/ImagePanel/ImageUploader";
+import ImagePanel from "./components/ImagePanel/ImagePanel";
 import AnalysisPanel from "./components/AnalysisPanel/AnalysisPanel";
 import "./App.css";
 import { ProjectProvider } from "./contexts/ProjectContext";
@@ -19,7 +19,7 @@ function App() {
 							className={`panel-image-wrap${analysisVisible ? " panel-image-wrap--split" : ""}`}
 						>
 							<div className="panel-image-inner">
-								<ImageUploader onEstimate={() => setAnalysisVisible(true)} />
+								<ImagePanel onEstimate={() => setAnalysisVisible(true)} />
 							</div>
 						</div>
 						{analysisVisible && (

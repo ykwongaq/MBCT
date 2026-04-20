@@ -1,8 +1,10 @@
-import cv2
 import numpy as np
 import torch
 
+from ..utils.logger import get_logger
 from .metric_depth.depth_anything_v2.dpt import DepthAnythingV2
+
+_logger = get_logger(__name__)
 
 
 class DepthAnythingV2VKittiModel:
@@ -26,14 +28,24 @@ class DepthAnythingV2VKittiModel:
         }
 
         encoder = "vitl"
-        dataset = "vkitti"
         max_depth = 80
 
+        device = "cuda" if torch.cuda.is_available() else "cpu"
         model = DepthAnythingV2(**{**model_configs[encoder], "max_depth": max_depth})
-        model.load_state_dict(torch.load(checkpoint_path, map_location="cuda"))
+        model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+        model = model.to(device)
         model.eval()
 
         self.model = model
 
-    def predict(self, image: np.ndarray) -> np.ndarray:
-        pass
+        _logger.info(f"Loaded DepthAnythingV2VKittiModel from {checkpoint_path}")
+
+    def infer_image(self, image: np.ndarray) -> np.ndarray:
+        with torch.no_grad():
+            depth = self.model.infer_image(image)
+        _logger.info(f"Inferred depth map with shape {depth.shape}")
+        _logger.info(
+            f"Depth map stats - min: {depth.min()}, max: {depth.max()}, mean: {depth.mean()}"
+        )
+
+        return depth

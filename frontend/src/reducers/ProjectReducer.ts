@@ -1,5 +1,6 @@
 import type { Image } from "../types/Image";
 import type { BBox } from "../types/BBox";
+import type { DepthMap } from "../types/DepthMap";
 import type { ProjectState } from "../types/ProjectState";
 
 export const initialProjectState: ProjectState = {
@@ -18,6 +19,10 @@ export type ProjectAction =
 	| {
 			type: "SET_BBOX";
 			payload: { id: number; bbox: BBox };
+	  }
+	| {
+			type: "SET_DEPTH_MAP";
+			payload: { id: number; depthMap: DepthMap };
 	  };
 
 function addImage(state: ProjectState, image: Image): ProjectState {
@@ -48,6 +53,19 @@ function setBBox(state: ProjectState, id: number, bbox: BBox): ProjectState {
 	};
 }
 
+function setDepthMap(
+	state: ProjectState,
+	id: number,
+	depthMap: DepthMap,
+): ProjectState {
+	return {
+		...state,
+		dataList: state.dataList.map((data) =>
+			data.id === id ? { ...data, depthMap } : data,
+		),
+	};
+}
+
 export function projectReducer(
 	state: ProjectState,
 	action: ProjectAction,
@@ -59,6 +77,8 @@ export function projectReducer(
 			return removeImage(state, action.payload.id);
 		case "SET_BBOX":
 			return setBBox(state, action.payload.id, action.payload.bbox);
+		case "SET_DEPTH_MAP":
+			return setDepthMap(state, action.payload.id, action.payload.depthMap);
 		default:
 			return state;
 	}

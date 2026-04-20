@@ -2,12 +2,13 @@ import styles from "./EstimateButton.module.css";
 
 interface EstimateButtonProps {
 	onClick: () => void;
+	loading?: boolean;
 }
 
-function EstimateButton({ onClick }: EstimateButtonProps) {
+function EstimateButton({ onClick, loading }: EstimateButtonProps) {
 	return (
 		<div className={styles.actions}>
-			<button className={styles.estimateBtn} onClick={onClick}>
+			<button className={styles.estimateBtn} onClick={onClick} disabled={loading}>
 				<svg
 					width="18"
 					height="18"
