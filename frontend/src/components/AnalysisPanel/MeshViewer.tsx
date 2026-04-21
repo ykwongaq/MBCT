@@ -176,7 +176,6 @@ function Scene({
 				depthMap.height,
 			);
 			const tex = new THREE.CanvasTexture(offscreen);
-			tex.flipY = false;
 			if (mat.map) mat.map.dispose();
 			mat.map = tex;
 			mat.color.set(0xffffff);
