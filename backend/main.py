@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from server.schemas import DepthEstimationResponse
+from server.schemas import DepthEstimationResponse, DepthMap
 from server.server import Server
 from server.utils.image import read_image_file_to_BGR
 from server.utils.logger import get_logger
@@ -43,7 +43,9 @@ async def depth_estimation(image: UploadFile = File(...)) -> DepthEstimationResp
     depth_base64 = base64.b64encode(depth_bytes).decode("utf-8")
 
     return DepthEstimationResponse(
-        depth_base64=depth_base64,
-        shape=list(depth_map.shape),
-        dtype=str(depth_map.dtype),
+        depth_map=DepthMap(
+            depth_base64=depth_base64,
+            shape=list(depth_map.shape),
+            dtype=str(depth_map.dtype),
+        )
     )

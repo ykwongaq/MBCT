@@ -3,6 +3,14 @@ from typing import List
 from pydantic import BaseModel
 
 
+class DepthMap(BaseModel):
+    """Model for depth map data."""
+
+    depth_base64: str
+    shape: List[int]
+    dtype: str
+
+
 class DepthEstimationResponse(BaseModel):
     """Response model for depth estimation endpoint.
 
@@ -11,6 +19,10 @@ class DepthEstimationResponse(BaseModel):
     and reshape it according to the provided shape.
     """
 
-    depth_base64: str
-    shape: List[int]
-    dtype: str
+    depth_map: DepthMap
+
+
+class RugosityCalculationRequest(BaseModel):
+    """Request model for rugosity calculation endpoint."""
+
+    depth_map: DepthMap
