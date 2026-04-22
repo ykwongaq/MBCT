@@ -1,59 +1,19 @@
 import { useState, useRef } from "react";
 import MessageBox from "../../components/common/MessageBox/MessageBox";
-import ErrorBox from "../../components/common/MessageBox/ErrorBox";
 import styles from "./ImagePanel.module.css";
 import { useProject } from "../../contexts/ProjectContext";
 import { useAnnotationSession } from "../../contexts/AnnotationSessionContext";
 import type { Image as AppImage } from "../../types/Image";
-import type { BBox } from "../../types/BBox";
 import ImageSlideShow from "./ImageSlideShow";
 import ImageCollectionBar from "./ImageCollectionBar";
 import ImageDropArea from "./ImageDropArea";
 import EstimateButton from "./EstimateButton";
 import AddPointButton from "./AddPointButton";
 import ClearPointsButton from "./ClearPointsButton";
-import { estimate } from "../../services/EstimateService";
-import type { EstimateResult } from "../../services/EstimateService";
+import type { BBox } from "../../types/BBox";
 
 interface Props {
 	onEstimate?: () => void;
-}
-
-function cropImage(imageUrl: string, bbox: BBox): Promise<Blob> {
-	return new Promise((resolve, reject) => {
-		const img = new window.Image();
-		img.onload = () => {
-			const canvas = document.createElement("canvas");
-			canvas.width = Math.round(bbox.width);
-			canvas.height = Math.round(bbox.height);
-			const ctx = canvas.getContext("2d");
-			if (!ctx) {
-				reject(new Error("No canvas context"));
-				return;
-			}
-			ctx.drawImage(
-				img,
-				Math.round(bbox.x_top_left),
-				Math.round(bbox.y_top_left),
-				Math.round(bbox.width),
-				Math.round(bbox.height),
-				0,
-				0,
-				Math.round(bbox.width),
-				Math.round(bbox.height),
-			);
-			canvas.toBlob(
-				(blob) => {
-					if (blob) resolve(blob);
-					else reject(new Error("Canvas toBlob failed"));
-				},
-				"image/jpeg",
-				0.95,
-			);
-		};
-		img.onerror = reject;
-		img.src = imageUrl;
-	});
 }
 
 function ImagePanel({ onEstimate }: Props) {
@@ -62,9 +22,6 @@ function ImagePanel({ onEstimate }: Props) {
 		useAnnotationSession();
 
 	const [messageBoxOpen, setMessageBoxOpen] = useState(false);
-	const [errorBoxOpen, setErrorBoxOpen] = useState(false);
-	const [errorMessage, setErrorMessage] = useState("");
-	const [isEstimating, setIsEstimating] = useState(false);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const dataList = projectState.dataList;
@@ -167,52 +124,13 @@ function ImagePanel({ onEstimate }: Props) {
 		projectDispatch({ type: "SET_BBOX", payload: { id, bbox } });
 	};
 
-	const handleEstimate = async () => {
+	const handleEstimate = () => {
 		const currentData = dataList.find((d) => d.id === currentImageId);
 		if (!currentData?.bbox) {
 			setMessageBoxOpen(true);
 			return;
 		}
-
-		setIsEstimating(true);
-		try {
-			const blob = await cropImage(
-				currentData.image.imageUrl,
-				currentData.bbox,
-			);
-			estimate(
-				blob,
-				{
-					onComplete: (result: EstimateResult) => {
-						projectDispatch({
-							type: "SET_DEPTH_MAP",
-							payload: { id: currentImageId!, depthMap: result.depthMap },
-						});
-						projectDispatch({
-							type: "SET_ANALYSIS_REPORT",
-							payload: {
-								id: currentImageId!,
-								analysisReport: result.statistics,
-							},
-						});
-						onEstimate?.();
-						setIsEstimating(false);
-					},
-					onError: (error) => {
-						setErrorMessage(error.message || "Estimation failed.");
-						setErrorBoxOpen(true);
-						setIsEstimating(false);
-					},
-				},
-				currentData.referencePoints ?? [],
-				currentData.bbox,
-			);
-		} catch (err) {
-			const msg = err instanceof Error ? err.message : "Failed to crop image.";
-			setErrorMessage(msg);
-			setErrorBoxOpen(true);
-			setIsEstimating(false);
-		}
+		onEstimate?.();
 	};
 
 	return (
@@ -271,7 +189,7 @@ function ImagePanel({ onEstimate }: Props) {
 							})
 						}
 					/>
-					<EstimateButton onClick={handleEstimate} loading={isEstimating} />
+					<EstimateButton onClick={handleEstimate} loading={false} />
 				</div>
 			)}
 
@@ -291,12 +209,6 @@ function ImagePanel({ onEstimate }: Props) {
 				onClose={() => setMessageBoxOpen(false)}
 			/>
 
-			<ErrorBox
-				open={errorBoxOpen}
-				title="Estimation failed"
-				message={errorMessage}
-				onClose={() => setErrorBoxOpen(false)}
-			/>
 		</section>
 	);
 }

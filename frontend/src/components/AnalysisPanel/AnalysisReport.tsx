@@ -4,9 +4,10 @@ import type { Statistic } from "../../types/Statistic";
 interface Props {
 	stats: Statistic;
 	selectedUnit?: "cm" | "m" | "mm";
+	isLoading?: boolean;
 }
 
-function AnalysisReport({ stats, selectedUnit = "m" }: Props) {
+function AnalysisReport({ stats, selectedUnit = "m", isLoading }: Props) {
 	const METRICS: {
 		key: keyof Statistic;
 		label: string;
@@ -51,6 +52,19 @@ function AnalysisReport({ stats, selectedUnit = "m" }: Props) {
 				</thead>
 				<tbody>
 					{METRICS.map(({ key, label, format, unit, desc }) => {
+						if (isLoading) {
+							return (
+								<tr key={key} className={styles.tr}>
+									<td className={styles.td}>{label}</td>
+									<td className={`${styles.td} ${styles.tdValue}`}>
+										<span className={styles.skeleton} />
+									</td>
+									<td className={`${styles.td} ${styles.tdDesc}`}>
+										<span className={`${styles.skeleton} ${styles.skeletonWide}`} />
+									</td>
+								</tr>
+							);
+						}
 						const raw = stats[key];
 						if (raw === undefined) return null;
 						return (

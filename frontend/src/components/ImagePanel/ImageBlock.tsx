@@ -160,7 +160,7 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 		// Don't add point if clicked on an existing marker (those stop propagation)
 		projectDispatch({
 			type: "ADD_REFERENCE_POINT",
-			payload: { id: data.id, point: loc, distance: 0 },
+			payload: { id: data.id, point: loc, distance: 1 },
 		});
 	};
 

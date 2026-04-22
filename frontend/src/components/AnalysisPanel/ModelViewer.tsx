@@ -11,9 +11,10 @@ interface Props {
 	depthMap?: DepthMap;
 	imageUrl?: string;
 	bbox?: BBox;
+	isLoading?: boolean;
 }
 
-function ModelViewer({ depthMap, imageUrl, bbox }: Props) {
+function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 	const [viewMode, setViewMode] = useState<ViewMode>("mesh");
 	const meshRef = useRef<MeshViewerHandle>(null);
 	const pointCloudRef = useRef<PointCloudViewerHandle>(null);
@@ -49,6 +50,12 @@ function ModelViewer({ depthMap, imageUrl, bbox }: Props) {
 				</button>
 			</div>
 			<div className={styles.body}>
+				{isLoading && (
+					<div className={styles.loadingOverlay}>
+						<span className={styles.loadingSpinner} />
+						<span className={styles.loadingLabel}>Estimating…</span>
+					</div>
+				)}
 				{viewMode === "mesh" ? (
 					<MeshViewer
 						ref={meshRef}
