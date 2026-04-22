@@ -1,0 +1,35 @@
+.clearPointsBtn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 20px;
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--color-danger, #dc3545);
+	background: transparent;
+	border: 1.5px solid var(--color-danger, #dc3545);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
+	transition:
+		background 0.2s,
+		color 0.2s,
+		transform 0.1s,
+		box-shadow 0.2s,
+		opacity 0.2s;
+	cursor: pointer;
+}
+
+.clearPointsBtn:hover:not(:disabled) {
+	background: var(--color-danger, #dc3545);
+	color: #fff;
+	box-shadow: var(--shadow-md);
+}
+
+.clearPointsBtn:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.clearPointsBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}

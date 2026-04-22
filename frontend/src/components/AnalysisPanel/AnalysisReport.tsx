@@ -3,39 +3,39 @@ import type { Statistic } from "../../types/Statistic";
 
 interface Props {
 	stats: Statistic;
+	selectedUnit?: "cm" | "m" | "mm";
 }
 
-const METRICS: {
-	key: keyof Statistic;
-	label: string;
-	format: (v: number) => string;
-	unit: string;
-	desc: string;
-}[] = [
-	{
-		key: "rugosity",
-		label: "Rugosity",
-		format: (v) => v.toFixed(3),
-		unit: "",
-		desc: "Ratio of surface area to planar area",
-	},
-	{
-		key: "fractalDimension",
-		label: "Fractal Dimension",
-		format: (v) => v.toFixed(3),
-		unit: "",
-		desc: "3D structural complexity measure",
-	},
-	{
-		key: "colonyHeight",
-		label: "Colony Height",
-		format: (v) => v.toFixed(2),
-		unit: "m",
-		desc: "Maximum vertical extent",
-	},
-];
-
-function AnalysisReport({ stats }: Props) {
+function AnalysisReport({ stats, selectedUnit = "m" }: Props) {
+	const METRICS: {
+		key: keyof Statistic;
+		label: string;
+		format: (v: number) => string;
+		unit: string;
+		desc: string;
+	}[] = [
+		{
+			key: "rugosity",
+			label: "Rugosity",
+			format: (v) => v.toFixed(3),
+			unit: "",
+			desc: "Ratio of surface area to planar area",
+		},
+		{
+			key: "fractalDimension",
+			label: "Fractal Dimension",
+			format: (v) => v.toFixed(3),
+			unit: "",
+			desc: "3D structural complexity measure",
+		},
+		{
+			key: "colonyHeight",
+			label: "Colony Height",
+			format: (v) => v.toFixed(2),
+			unit: selectedUnit,
+			desc: "Maximum vertical extent",
+		},
+	];
 	return (
 		<div className={styles.report}>
 			<div className={styles.reportHeader}>

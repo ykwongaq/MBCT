@@ -10,7 +10,10 @@ import ImageSlideShow from "./ImageSlideShow";
 import ImageCollectionBar from "./ImageCollectionBar";
 import ImageDropArea from "./ImageDropArea";
 import EstimateButton from "./EstimateButton";
-import { estimateDepth } from "../../services/DepthPredictionService";
+import AddPointButton from "./AddPointButton";
+import ClearPointsButton from "./ClearPointsButton";
+import { estimate } from "../../services/EstimateService";
+import type { EstimateResult } from "../../services/EstimateService";
 
 interface Props {
 	onEstimate?: () => void;
@@ -177,21 +180,33 @@ function ImagePanel({ onEstimate }: Props) {
 				currentData.image.imageUrl,
 				currentData.bbox,
 			);
-			estimateDepth(blob, {
-				onComplete: (depthMap) => {
-					projectDispatch({
-						type: "SET_DEPTH_MAP",
-						payload: { id: currentImageId!, depthMap },
-					});
-					setIsEstimating(false);
-					onEstimate?.();
+			estimate(
+				blob,
+				{
+					onComplete: (result: EstimateResult) => {
+						projectDispatch({
+							type: "SET_DEPTH_MAP",
+							payload: { id: currentImageId!, depthMap: result.depthMap },
+						});
+						projectDispatch({
+							type: "SET_ANALYSIS_REPORT",
+							payload: {
+								id: currentImageId!,
+								analysisReport: result.statistics,
+							},
+						});
+						onEstimate?.();
+						setIsEstimating(false);
+					},
+					onError: (error) => {
+						setErrorMessage(error.message || "Estimation failed.");
+						setErrorBoxOpen(true);
+						setIsEstimating(false);
+					},
 				},
-				onError: (error) => {
-					setErrorMessage(error.message || "Depth estimation failed.");
-					setErrorBoxOpen(true);
-					setIsEstimating(false);
-				},
-			});
+				currentData.referencePoints ?? [],
+				currentData.bbox,
+			);
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : "Failed to crop image.";
 			setErrorMessage(msg);
@@ -234,7 +249,30 @@ function ImagePanel({ onEstimate }: Props) {
 			</div>
 
 			{dataList.length > 0 && (
-				<EstimateButton onClick={handleEstimate} loading={isEstimating} />
+				<div className={styles.actions}>
+					<ClearPointsButton
+						disabled={
+							(dataList.find((d) => d.id === currentImageId)?.referencePoints
+								?.length ?? 0) === 0
+						}
+						onClick={() =>
+							projectDispatch({
+								type: "CLEAR_REFERENCE_POINTS",
+								payload: { id: currentImageId! },
+							})
+						}
+					/>
+					<AddPointButton
+						isEditing={annotationSessionState.isEditingReferencePoints}
+						onClick={() =>
+							annotationSessionDispatch({
+								type: "TOGGLE_IS_EIDITING_REFERENCE_POINT",
+								payload: {},
+							})
+						}
+					/>
+					<EstimateButton onClick={handleEstimate} loading={isEstimating} />
+				</div>
 			)}
 
 			<input

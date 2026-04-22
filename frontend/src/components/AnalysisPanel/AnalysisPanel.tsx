@@ -19,6 +19,8 @@ function AnalysisPanel() {
 		(d) => d.id === annotationSessionState.currentImageId,
 	);
 
+	const stats = currentData?.analysisReport ?? DEFAULT_STATS;
+
 	return (
 		<section className={styles.panel}>
 			<div className={styles.panelHeader}>
@@ -36,7 +38,7 @@ function AnalysisPanel() {
 				/>
 			</div>
 			<div className={styles.reportWrap}>
-				<AnalysisReport stats={DEFAULT_STATS} />
+				<AnalysisReport stats={stats} selectedUnit={currentData?.selectedUnit} />
 			</div>
 		</section>
 	);

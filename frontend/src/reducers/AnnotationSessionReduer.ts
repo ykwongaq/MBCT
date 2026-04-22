@@ -4,7 +4,7 @@ import type { BBox } from "../types/BBox";
 export const initialAnnotationSession: AnnotationSession = {
 	currentImageId: null,
 	pendingBBox: null,
-	showAnlaysis: false,
+	isEditingReferencePoints: false,
 };
 
 export type AnnotationSessionAction =
@@ -15,8 +15,21 @@ export type AnnotationSessionAction =
 	| {
 			type: "SET_PENDING_BBOX";
 			payload: { bbox: BBox | null };
+	  }
+	| {
+			type: "TOGGLE_IS_EIDITING_REFERENCE_POINT";
+			payload: {};
 	  };
 
+function toggleIsEditingReferencePoint(
+	state: AnnotationSession,
+): AnnotationSession {
+	const newValue = !state.isEditingReferencePoints;
+	return {
+		...state,
+		isEditingReferencePoints: newValue,
+	};
+}
 function setCurrentImageId(
 	state: AnnotationSession,
 	imageId: number | null,
@@ -46,6 +59,8 @@ export function annotationSessionReducer(
 			return setCurrentImageId(state, action.payload.imageId);
 		case "SET_PENDING_BBOX":
 			return setPendingBBox(state, action.payload.bbox);
+		case "TOGGLE_IS_EIDITING_REFERENCE_POINT":
+			return toggleIsEditingReferencePoint(state);
 		default:
 			return state;
 	}

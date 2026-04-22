@@ -37,6 +37,14 @@
 	flex-direction: column;
 }
 
+/* Action buttons row */
+.actions {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 10px;
+}
+
 /* Hidden file input */
 .fileInput {
 	display: none;

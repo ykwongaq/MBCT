@@ -26,7 +26,7 @@ class Analysis:
     def cal_height_range(
         self,
         depth_map: np.ndarray,
-        real_distance: List[Dict],
+        real_distance: List[Dict] = None,
         filter_map: np.ndarray = None,
     ):
         """
@@ -42,6 +42,10 @@ class Analysis:
             }
         - filter_map (np.ndarray): Optional boolean mask to filter valid pixels.
         """
+
+        if real_distance == None:
+            return np.max(depth_map) - np.min(depth_map)
+
         # --- Step 1: Gather calibration data ---
         calib_depths = []
         calib_reals = []

@@ -1,8 +1,3 @@
-.actions {
-	display: flex;
-	justify-content: flex-end;
-}
-
 .estimateBtn {
 	display: inline-flex;
 	align-items: center;
