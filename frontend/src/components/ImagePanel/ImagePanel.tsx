@@ -139,8 +139,10 @@ function ImagePanel({ onEstimate }: Props) {
 				<h2 className={styles.sectionTitle}>Image Analysis</h2>
 				<p className={styles.sectionDesc}>
 					Upload top-down vertical images of benthic habitats to estimate
-					structural complexity metrics. <br /> You a drag the bounding box to
-					adjust the area of interest.
+					structural complexity metrics. <br /> Drag the bounding box to adjust
+					the area of interest. <br /> To enable colony height estimation, click
+					on the image to define at least two reference points for scale
+					calibration.
 				</p>
 			</div>
 
@@ -208,7 +210,6 @@ function ImagePanel({ onEstimate }: Props) {
 				message="Please drag a bounding box on the current image before continuing."
 				onClose={() => setMessageBoxOpen(false)}
 			/>
-
 		</section>
 	);
 }
