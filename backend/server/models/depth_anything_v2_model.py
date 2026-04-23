@@ -47,6 +47,8 @@ class DepthAnythingV2Model:
             with torch.no_grad():
                 depth = model.infer_image(image, input_size=self.input_size)
 
+        torch.cuda.empty_cache()
+
         depth = (depth - depth.min()) / (depth.max() - depth.min() + 1e-8)
         depth = 1 - depth
 

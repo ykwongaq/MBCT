@@ -47,4 +47,6 @@ class DepthAnythingV2VKittiModel:
             with torch.no_grad():
                 depth = model.infer_image(image, input_size=self.input_size)
 
+        torch.cuda.empty_cache()
+
         return depth
