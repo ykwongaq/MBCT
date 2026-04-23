@@ -1,4 +1,10 @@
-import { useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from "react";
+import {
+	useEffect,
+	useRef,
+	useMemo,
+	forwardRef,
+	useImperativeHandle,
+} from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import styles from "./PointCloudViewer.module.css";
@@ -151,10 +157,12 @@ function Scene({
 			);
 			const imageData = ctx.getImageData(0, 0, depthMap.width, depthMap.height);
 			const colors = new Float32Array(depthMap.width * depthMap.height * 3);
+
+			const brightness = 0.8;
 			for (let i = 0; i < depthMap.width * depthMap.height; i++) {
-				colors[i * 3] = (imageData.data[i * 4] / 255) * 0.75;
-				colors[i * 3 + 1] = (imageData.data[i * 4 + 1] / 255) * 0.75;
-				colors[i * 3 + 2] = (imageData.data[i * 4 + 2] / 255) * 0.75;
+				colors[i * 3] = (imageData.data[i * 4] / 255) * brightness;
+				colors[i * 3 + 1] = (imageData.data[i * 4 + 1] / 255) * brightness;
+				colors[i * 3 + 2] = (imageData.data[i * 4 + 2] / 255) * brightness;
 			}
 			geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 			if (matRef.current) {
@@ -235,7 +243,10 @@ function Scene({
 }
 
 const PointCloudViewer = forwardRef<PointCloudViewerHandle, Props>(
-	function PointCloudViewer({ depthMap, imageUrl, bbox, autoRotate = true }, ref) {
+	function PointCloudViewer(
+		{ depthMap, imageUrl, bbox, autoRotate = true },
+		ref,
+	) {
 		const wrapRef = useRef<HTMLDivElement>(null);
 		const isDragRef = useRef(false);
 		const isPanRef = useRef(false);

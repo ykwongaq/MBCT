@@ -30,7 +30,8 @@ class DepthAnythingV2VKittiModel:
 
         encoder = "vitl"
         max_depth = 20
-        self.input_size = 1036
+        self.input_size = 518
+        # self.input_size = 1036
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model = DepthAnythingV2(**{**model_configs[encoder], "max_depth": max_depth})

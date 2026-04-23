@@ -36,7 +36,8 @@ class DepthAnythingV2Model:
         model = model.to(device)
         model.eval()
 
-        self.input_size = 1036
+        self.input_size = 518
+        # self.input_size = 1036
 
         _logger_.info("Loaded model from %s", checkpoint)
 
