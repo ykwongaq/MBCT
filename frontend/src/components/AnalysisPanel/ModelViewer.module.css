@@ -25,6 +25,32 @@
 	letter-spacing: 0.3px;
 }
 
+.modelSelect {
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.65);
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 4px;
+	padding: 3px 8px;
+	cursor: pointer;
+	outline: none;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.modelSelect:hover {
+	background: rgba(255, 255, 255, 0.12);
+	border-color: rgba(255, 255, 255, 0.2);
+}
+
+.modelSelect:focus {
+	border-color: rgba(72, 201, 176, 0.5);
+}
+
+.modelSelect option {
+	background: #0c1c2c;
+	color: rgba(255, 255, 255, 0.85);
+}
+
 .toggleGroup {
 	display: flex;
 	background: rgba(255, 255, 255, 0.06);

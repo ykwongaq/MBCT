@@ -2,10 +2,10 @@ import base64
 import json
 import os
 
-import cv2
 import numpy as np
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from server.enums import DepthModelName
 from server.schemas import (
     ComplexityAnalysisRequest,
     ComplexityAnalysisResponse,
@@ -40,10 +40,13 @@ app.add_middleware(
 
 
 @app.post("/api/mbct/depth_estimation", response_model=DepthEstimationResponse)
-async def depth_estimation(image: UploadFile = File(...)) -> DepthEstimationResponse:
+async def depth_estimation(
+    image: UploadFile = File(...),
+    model_name: DepthModelName = Form(DepthModelName.DEPTH_ANYTHING_V2),
+) -> DepthEstimationResponse:
     # Read the uploaded image file into a numpy array (BGR format)
     image = await read_image_file_to_BGR(image)
-    depth_map = _server.predict_depth(image)
+    depth_map = _server.predict_depth(image, model_name)
 
     # Encode the float32 depth map as a base64 string
     depth_bytes = depth_map.astype(np.float32).tobytes()
@@ -92,13 +95,14 @@ async def complexity_analysis(
 async def estimate(
     image: UploadFile = File(...),
     reference_points: str = Form("[]"),
+    model_name: DepthModelName = Form(DepthModelName.DEPTH_ANYTHING_V2),
 ) -> EstimateResponse:
     """Combined endpoint: runs depth estimation and complexity analysis in one go."""
     parsed = [ReferencePoint(**rp) for rp in json.loads(reference_points)]
 
     # Read the uploaded image file into a numpy array (BGR format)
     image = await read_image_file_to_BGR(image)
-    depth_map = _server.predict_depth(image)
+    depth_map = _server.predict_depth(image, model_name)
 
     # Encode the float32 depth map as a base64 string
     depth_bytes = depth_map.astype(np.float32).tobytes()

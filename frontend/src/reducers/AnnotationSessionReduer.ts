@@ -5,6 +5,7 @@ export const initialAnnotationSession: AnnotationSession = {
 	currentImageId: null,
 	pendingBBox: null,
 	isEditingReferencePoints: false,
+	modelName: "depth_anything_v2_vkitti",
 };
 
 export type AnnotationSessionAction =
@@ -19,6 +20,10 @@ export type AnnotationSessionAction =
 	| {
 			type: "TOGGLE_IS_EIDITING_REFERENCE_POINT";
 			payload: {};
+	  }
+	| {
+			type: "SET_MODEL_NAME";
+			payload: { modelName: AnnotationSession["modelName"] };
 	  };
 
 function toggleIsEditingReferencePoint(
@@ -50,6 +55,16 @@ function setPendingBBox(
 	};
 }
 
+function setModelName(
+	state: AnnotationSession,
+	modelName: AnnotationSession["modelName"],
+): AnnotationSession {
+	return {
+		...state,
+		modelName,
+	};
+}
+
 export function annotationSessionReducer(
 	state: AnnotationSession,
 	action: AnnotationSessionAction,
@@ -61,6 +76,8 @@ export function annotationSessionReducer(
 			return setPendingBBox(state, action.payload.bbox);
 		case "TOGGLE_IS_EIDITING_REFERENCE_POINT":
 			return toggleIsEditingReferencePoint(state);
+		case "SET_MODEL_NAME":
+			return setModelName(state, action.payload.modelName);
 		default:
 			return state;
 	}

@@ -4,6 +4,7 @@ import type { DepthMap } from "../types/DepthMap";
 import type { Statistic } from "../types/Statistic";
 import type { ReferencePoint } from "../types/ReferencePoint";
 import type { BBox } from "../types/BBox";
+import type { DepthModelName } from "../types/DepthModelName";
 
 interface EstimateServerResponse {
 	depth_map: {
@@ -23,6 +24,7 @@ export interface EstimateResult {
 
 export function estimate(
 	croppedImageBlob: Blob,
+	modelName: DepthModelName,
 	callbacks: ApiRequestCallbacks<EstimateResult>,
 	referencePoints: ReferencePoint[] = [],
 	bbox?: BBox,
@@ -52,6 +54,7 @@ export function estimate(
 	const formData = new FormData();
 	formData.append("image", croppedImageBlob, "crop.jpg");
 	formData.append("reference_points", JSON.stringify(transformedPoints));
+	formData.append("model_name", modelName);
 
 	return apiClient.request<EstimateServerResponse>("/api/mbct/estimate", {
 		method: "POST",

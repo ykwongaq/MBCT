@@ -1,6 +1,7 @@
 import { apiClient } from "./apiClient";
 import type { ApiRequestCallbacks, ApiRequestHandle } from "../types/api";
 import type { DepthMap } from "../types/DepthMap";
+import type { DepthModelName } from "../types/DepthModelName";
 
 interface DepthEstimationServerResponse {
 	depth_map: {
@@ -12,12 +13,14 @@ interface DepthEstimationServerResponse {
 
 export function estimateDepth(
 	croppedImageBlob: Blob,
+	modelName: DepthModelName,
 	callbacks: ApiRequestCallbacks<DepthMap>,
 ): ApiRequestHandle {
 	callbacks.onLoading?.();
 
 	const formData = new FormData();
 	formData.append("image", croppedImageBlob, "crop.jpg");
+	formData.append("model_name", modelName);
 
 	return apiClient.request<DepthEstimationServerResponse>(
 		"/api/mbct/depth_estimation",

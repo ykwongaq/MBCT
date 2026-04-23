@@ -3,6 +3,7 @@ import torch
 
 from ..utils.logger import get_logger
 from .metric_depth.depth_anything_v2.dpt import DepthAnythingV2
+from .model_queue import ModelQueue
 
 _logger = get_logger(__name__)
 
@@ -28,7 +29,8 @@ class DepthAnythingV2VKittiModel:
         }
 
         encoder = "vitl"
-        max_depth = 80
+        max_depth = 20
+        self.input_size = 1036
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         model = DepthAnythingV2(**{**model_configs[encoder], "max_depth": max_depth})
@@ -36,16 +38,13 @@ class DepthAnythingV2VKittiModel:
         model = model.to(device)
         model.eval()
 
-        self.model = model
+        self._queue = ModelQueue(model)
 
         _logger.info(f"Loaded DepthAnythingV2VKittiModel from {checkpoint_path}")
 
     def infer_image(self, image: np.ndarray) -> np.ndarray:
-        with torch.no_grad():
-            depth = self.model.infer_image(image)
-        _logger.info(f"Inferred depth map with shape {depth.shape}")
-        _logger.info(
-            f"Depth map stats - min: {depth.min()}, max: {depth.max()}, mean: {depth.mean()}"
-        )
+        with self._queue as model:
+            with torch.no_grad():
+                depth = model.infer_image(image, input_size=self.input_size)
 
         return depth

@@ -71,7 +71,8 @@ function cropImage(imageUrl: string, bbox: BBox): Promise<Blob> {
 
 function AnalysisPanel() {
 	const { projectState, projectDispatch } = useProject();
-	const { annotationSessionState } = useAnnotationSession();
+	const { annotationSessionState, annotationSessionDispatch } =
+		useAnnotationSession();
 
 	const [isLoading, setIsLoading] = useState(false);
 	const [errorBoxOpen, setErrorBoxOpen] = useState(false);
@@ -81,6 +82,7 @@ function AnalysisPanel() {
 	const prevBBoxRef = useRef<BBox | undefined>(undefined);
 	const estimateHandleRef = useRef<ApiRequestHandle | null>(null);
 	const estimateGenRef = useRef(0);
+	const prevModelNameRef = useRef<string | undefined>(undefined);
 
 	const currentImageId = annotationSessionState.currentImageId;
 	const currentData = projectState.dataList.find(
@@ -90,9 +92,11 @@ function AnalysisPanel() {
 	useEffect(() => {
 		const prevImageId = prevImageIdRef.current;
 		const prevBBox = prevBBoxRef.current;
+		const prevModelName = prevModelNameRef.current;
 
 		prevImageIdRef.current = currentImageId;
 		prevBBoxRef.current = currentData?.bbox;
+		prevModelNameRef.current = annotationSessionState.modelName;
 
 		if (!currentData?.bbox) return;
 
@@ -100,12 +104,10 @@ function AnalysisPanel() {
 		const imageChanged = !isInitialMount && prevImageId !== currentImageId;
 		const bboxChanged =
 			!isInitialMount && !imageChanged && currentData.bbox !== prevBBox;
-		const refPointsChanged = !isInitialMount && !imageChanged && !bboxChanged;
-
-		console.log("isInitialMount", isInitialMount);
-		console.log("imageChanged", imageChanged);
-		console.log("bboxChanged", bboxChanged);
-		console.log("refPointsChanged", refPointsChanged);
+		const modelChanged =
+			!isInitialMount && !imageChanged && !bboxChanged && annotationSessionState.modelName !== prevModelName;
+		const refPointsChanged =
+			!isInitialMount && !imageChanged && !bboxChanged && !modelChanged;
 
 		const { bbox } = currentData;
 		const imageUrl = currentData.image.imageUrl;
@@ -146,30 +148,17 @@ function AnalysisPanel() {
 			};
 		}
 
-		// Image changed or initial mount → skip if both depth map and report exist
-		if (
-			(isInitialMount || imageChanged) &&
-			currentData.depthMap &&
-			currentData.analysisReport
-		) {
-			console.log("Skipped");
-			return;
-		}
-
-		// BBox drawn/changed, or image change without cached data → full estimation
+		// BBox drawn/changed, model changed, or image changed → full estimation
 		estimateHandleRef.current?.cancel();
 		const gen = ++estimateGenRef.current;
 		setIsLoading(true);
 
 		cropImage(imageUrl, bbox)
 			.then((blob) => {
-				console.log("Estimate");
-				console.log("Gen", gen);
-				console.log("Estimate before", estimateHandleRef.current);
 				if (gen !== estimateGenRef.current) return;
-				console.log("Estimate after");
 				estimateHandleRef.current = estimate(
 					blob,
+					annotationSessionState.modelName,
 					{
 						onComplete: (result: EstimateResult) => {
 							if (gen !== estimateGenRef.current) return;
@@ -212,6 +201,7 @@ function AnalysisPanel() {
 		currentData?.bbox,
 		currentData?.referencePoints,
 		projectDispatch,
+		annotationSessionState.modelName,
 	]);
 
 	const stats = currentData?.analysisReport ?? null;
@@ -231,6 +221,13 @@ function AnalysisPanel() {
 					imageUrl={currentData?.image.imageUrl}
 					bbox={currentData?.bbox}
 					isLoading={isLoading}
+					modelName={annotationSessionState.modelName}
+					onModelChange={(modelName) =>
+						annotationSessionDispatch({
+							type: "SET_MODEL_NAME",
+							payload: { modelName },
+						})
+					}
 				/>
 			</div>
 			<div className={styles.reportWrap}>

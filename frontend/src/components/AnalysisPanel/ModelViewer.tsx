@@ -7,6 +7,8 @@ import DepthMapViewer, { type DepthMapViewerHandle } from "./DepthMapViewer";
 import styles from "./ModelViewer.module.css";
 import type { DepthMap } from "../../types/DepthMap";
 import type { BBox } from "../../types/BBox";
+import type { DepthModelName } from "../../types/DepthModelName";
+import { DEPTH_MODEL_NAMES } from "../../types/DepthModelName";
 
 type ViewMode = "mesh" | "pointcloud" | "depthmap";
 
@@ -15,9 +17,23 @@ interface Props {
 	imageUrl?: string;
 	bbox?: BBox;
 	isLoading?: boolean;
+	modelName?: DepthModelName;
+	onModelChange?: (modelName: DepthModelName) => void;
 }
 
-function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
+const MODEL_LABELS: Record<DepthModelName, string> = {
+	depth_anything_v2: "Depth Anything V2",
+	depth_anything_v2_vkitti: "Depth Anything V2 (VKITTI)",
+};
+
+function ModelViewer({
+	depthMap,
+	imageUrl,
+	bbox,
+	isLoading,
+	modelName,
+	onModelChange,
+}: Props) {
 	const [viewMode, setViewMode] = useState<ViewMode>("pointcloud");
 	const [autoRotate, setAutoRotate] = useState(true);
 	const meshRef = useRef<MeshViewerHandle>(null);
@@ -34,6 +50,21 @@ function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 		<div className={styles.viewer}>
 			<div className={styles.header}>
 				<span className={styles.title}>3D Viewer</span>
+				{modelName && onModelChange && (
+					<select
+						className={styles.modelSelect}
+						value={modelName}
+						onChange={(e) =>
+							onModelChange(e.target.value as DepthModelName)
+						}
+					>
+						{DEPTH_MODEL_NAMES.map((name) => (
+							<option key={name} value={name}>
+								{MODEL_LABELS[name]}
+							</option>
+						))}
+					</select>
+				)}
 				<div className={styles.toggleGroup}>
 					<button
 						className={`${styles.toggleBtn} ${viewMode === "pointcloud" ? styles.toggleBtnActive : ""}`}
