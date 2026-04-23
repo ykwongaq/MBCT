@@ -28,6 +28,7 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 	const onBBoxChangeRef = useRef(onBBoxChange);
 	const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 	const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
+	const dragBoxRef = useRef<BBox | null>(null);
 
 	const [overlayRect, setOverlayRect] = useState<OverlayRect>({
 		left: 0,
@@ -105,18 +106,20 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 			const y = Math.min(start.y, loc.y);
 			const width = Math.abs(loc.x - start.x);
 			const height = Math.abs(loc.y - start.y);
-			setDragBox({ x_top_left: x, y_top_left: y, width, height });
+			const newBox = { x_top_left: x, y_top_left: y, width, height };
+			dragBoxRef.current = newBox;
+			setDragBox(newBox);
 		};
 
 		const handleMouseUp = () => {
+			const finalBox = dragBoxRef.current;
+			dragBoxRef.current = null;
+			dragStartRef.current = null;
 			setIsDragging(false);
-			setDragBox((prev) => {
-				dragStartRef.current = null;
-				if (prev && prev.width > 2 && prev.height > 2) {
-					onBBoxChangeRef.current(prev);
-				}
-				return null;
-			});
+			setDragBox(null);
+			if (finalBox && finalBox.width > 2 && finalBox.height > 2) {
+				onBBoxChangeRef.current(finalBox);
+			}
 		};
 
 		window.addEventListener("mousemove", handleMouseMove);

@@ -6,9 +6,31 @@ import styles from "./AnalysisPanel.module.css";
 import { useProject } from "../../contexts/ProjectContext";
 import { useAnnotationSession } from "../../contexts/AnnotationSessionContext";
 import { estimate } from "../../services/EstimateService";
+import { analyzeComplexity } from "../../services/ComplexityAnalysisService";
 import type { EstimateResult } from "../../services/EstimateService";
 import type { BBox } from "../../types/BBox";
 import type { ApiRequestHandle } from "../../types/api";
+
+function transformReferencePoints(
+	referencePoints: { point: { x: number; y: number }; distance: number }[],
+	bbox: BBox,
+) {
+	return referencePoints
+		.map((rp) => ({
+			point: {
+				x: Math.round(rp.point.x - bbox.x_top_left),
+				y: Math.round(rp.point.y - bbox.y_top_left),
+			},
+			distance: rp.distance,
+		}))
+		.filter(
+			(rp) =>
+				rp.point.x >= 0 &&
+				rp.point.y >= 0 &&
+				rp.point.x < bbox.width &&
+				rp.point.y < bbox.height,
+		);
+}
 
 function cropImage(imageUrl: string, bbox: BBox): Promise<Blob> {
 	return new Promise((resolve, reject) => {
@@ -56,6 +78,7 @@ function AnalysisPanel() {
 	const [errorMessage, setErrorMessage] = useState("");
 
 	const prevImageIdRef = useRef<number | null | undefined>(undefined);
+	const prevBBoxRef = useRef<BBox | undefined>(undefined);
 	const estimateHandleRef = useRef<ApiRequestHandle | null>(null);
 	const estimateGenRef = useRef(0);
 
@@ -66,31 +89,85 @@ function AnalysisPanel() {
 
 	useEffect(() => {
 		const prevImageId = prevImageIdRef.current;
+		const prevBBox = prevBBoxRef.current;
+
 		prevImageIdRef.current = currentImageId;
+		prevBBoxRef.current = currentData?.bbox;
 
 		if (!currentData?.bbox) return;
 
 		const isInitialMount = prevImageId === undefined;
 		const imageChanged = !isInitialMount && prevImageId !== currentImageId;
-		const shouldCheckDepthMap = isInitialMount || imageChanged;
+		const bboxChanged =
+			!isInitialMount && !imageChanged && currentData.bbox !== prevBBox;
+		const refPointsChanged = !isInitialMount && !imageChanged && !bboxChanged;
 
-		// On image switch or initial mount, skip if depth map already exists
-		if (shouldCheckDepthMap && currentData.depthMap) return;
-
-		estimateHandleRef.current?.cancel();
-		const gen = ++estimateGenRef.current;
-
-		setIsLoading(true);
+		console.log("isInitialMount", isInitialMount);
+		console.log("imageChanged", imageChanged);
+		console.log("bboxChanged", bboxChanged);
+		console.log("refPointsChanged", refPointsChanged);
 
 		const { bbox } = currentData;
 		const imageUrl = currentData.image.imageUrl;
 		const referencePoints = currentData.referencePoints ?? [];
-
 		const imageId = currentImageId;
+
+		// Reference points edited → complexity analysis only (reuse existing depth map)
+		if (refPointsChanged) {
+			if (!currentData.depthMap || referencePoints.length < 2) return;
+
+			estimateHandleRef.current?.cancel();
+			const gen = ++estimateGenRef.current;
+			setIsLoading(true);
+
+			const transformed = transformReferencePoints(referencePoints, bbox);
+			estimateHandleRef.current = analyzeComplexity(
+				currentData.depthMap,
+				transformed,
+				{
+					onComplete: (result) => {
+						if (gen !== estimateGenRef.current) return;
+						projectDispatch({
+							type: "SET_ANALYSIS_REPORT",
+							payload: { id: imageId!, analysisReport: result },
+						});
+						setIsLoading(false);
+					},
+					onError: (err) => {
+						if (gen !== estimateGenRef.current) return;
+						setErrorMessage(err.message || "Complexity analysis failed.");
+						setErrorBoxOpen(true);
+						setIsLoading(false);
+					},
+				},
+			);
+			return () => {
+				estimateHandleRef.current?.cancel();
+			};
+		}
+
+		// Image changed or initial mount → skip if both depth map and report exist
+		if (
+			(isInitialMount || imageChanged) &&
+			currentData.depthMap &&
+			currentData.analysisReport
+		) {
+			console.log("Skipped");
+			return;
+		}
+
+		// BBox drawn/changed, or image change without cached data → full estimation
+		estimateHandleRef.current?.cancel();
+		const gen = ++estimateGenRef.current;
+		setIsLoading(true);
 
 		cropImage(imageUrl, bbox)
 			.then((blob) => {
+				console.log("Estimate");
+				console.log("Gen", gen);
+				console.log("Estimate before", estimateHandleRef.current);
 				if (gen !== estimateGenRef.current) return;
+				console.log("Estimate after");
 				estimateHandleRef.current = estimate(
 					blob,
 					{
@@ -128,7 +205,6 @@ function AnalysisPanel() {
 
 		return () => {
 			estimateHandleRef.current?.cancel();
-			estimateGenRef.current++;
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
