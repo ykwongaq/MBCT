@@ -65,6 +65,35 @@
 	margin-left: auto;
 }
 
+.rotateBtn {
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.45);
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 4px;
+	padding: 3px 9px;
+	cursor: pointer;
+	letter-spacing: 0.2px;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.rotateBtn:hover {
+	background: rgba(255, 255, 255, 0.12);
+	color: rgba(255, 255, 255, 0.75);
+}
+
+.rotateBtnActive {
+	color: rgba(72, 201, 176, 0.9);
+	background: rgba(72, 201, 176, 0.15);
+	border-color: rgba(72, 201, 176, 0.35);
+}
+
+.rotateBtnActive:hover {
+	color: rgba(72, 201, 176, 1);
+	background: rgba(72, 201, 176, 0.25);
+	border-color: rgba(72, 201, 176, 0.5);
+}
+
 .resetBtn {
 	font-size: 11px;
 	color: rgba(255, 255, 255, 0.45);

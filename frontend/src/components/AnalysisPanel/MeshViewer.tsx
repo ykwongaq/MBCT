@@ -13,6 +13,7 @@ interface Props {
 	depthMap?: DepthMap;
 	imageUrl?: string;
 	bbox?: BBox;
+	autoRotate?: boolean;
 }
 
 function buildMeshGeometry(depthMap: DepthMap): THREE.BufferGeometry {
@@ -122,6 +123,7 @@ interface SceneProps {
 	panYRef: React.RefObject<number>;
 	isDragRef: React.RefObject<boolean>;
 	isPanRef: React.RefObject<boolean>;
+	autoRotate?: boolean;
 }
 
 function Scene({
@@ -135,6 +137,7 @@ function Scene({
 	panYRef,
 	isDragRef,
 	isPanRef,
+	autoRotate,
 }: SceneProps) {
 	const matRef = useRef<THREE.MeshStandardMaterial>(null);
 	const { camera } = useThree();
@@ -185,7 +188,7 @@ function Scene({
 	}, [depthMap, imageUrl, bbox]);
 
 	useFrame(() => {
-		if (!isDragRef.current && !isPanRef.current) {
+		if (autoRotate && !isDragRef.current && !isPanRef.current) {
 			rotYRef.current += 0.004;
 		}
 		const r = zoomRef.current;
@@ -260,7 +263,7 @@ function Scene({
 }
 
 const MeshViewer = forwardRef<MeshViewerHandle, Props>(function MeshViewer(
-	{ depthMap, imageUrl, bbox },
+	{ depthMap, imageUrl, bbox, autoRotate = true },
 	ref,
 ) {
 	const wrapRef = useRef<HTMLDivElement>(null);
@@ -350,6 +353,7 @@ const MeshViewer = forwardRef<MeshViewerHandle, Props>(function MeshViewer(
 					panYRef={panYRef}
 					isDragRef={isDragRef}
 					isPanRef={isPanRef}
+					autoRotate={autoRotate}
 				/>
 			</Canvas>
 		</div>

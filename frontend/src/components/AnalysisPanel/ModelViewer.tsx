@@ -16,6 +16,7 @@ interface Props {
 
 function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 	const [viewMode, setViewMode] = useState<ViewMode>("mesh");
+	const [autoRotate, setAutoRotate] = useState(true);
 	const meshRef = useRef<MeshViewerHandle>(null);
 	const pointCloudRef = useRef<PointCloudViewerHandle>(null);
 
@@ -45,6 +46,13 @@ function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 				<span className={styles.hint}>
 					Left drag: rotate · Right drag: pan · Scroll: zoom
 				</span>
+				<button
+					className={`${styles.rotateBtn} ${autoRotate ? styles.rotateBtnActive : ""}`}
+					onClick={() => setAutoRotate((v) => !v)}
+					title={autoRotate ? "Disable auto-rotate" : "Enable auto-rotate"}
+				>
+					Rotate
+				</button>
 				<button className={styles.resetBtn} onClick={onReset}>
 					Reset
 				</button>
@@ -62,6 +70,7 @@ function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 						depthMap={depthMap}
 						imageUrl={imageUrl}
 						bbox={bbox}
+						autoRotate={autoRotate}
 					/>
 				) : (
 					<PointCloudViewer
@@ -69,6 +78,7 @@ function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 						depthMap={depthMap}
 						imageUrl={imageUrl}
 						bbox={bbox}
+						autoRotate={autoRotate}
 					/>
 				)}
 			</div>

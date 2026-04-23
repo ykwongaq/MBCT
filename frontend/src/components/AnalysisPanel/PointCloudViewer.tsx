@@ -13,6 +13,7 @@ interface Props {
 	depthMap?: DepthMap;
 	imageUrl?: string;
 	bbox?: BBox;
+	autoRotate?: boolean;
 }
 
 function buildPointCloudGeometry(depthMap: DepthMap): THREE.BufferGeometry {
@@ -76,6 +77,7 @@ interface SceneProps {
 	panYRef: React.RefObject<number>;
 	isDragRef: React.RefObject<boolean>;
 	isPanRef: React.RefObject<boolean>;
+	autoRotate?: boolean;
 }
 
 function createCircleTexture(): THREE.Texture {
@@ -104,6 +106,7 @@ function Scene({
 	panYRef,
 	isDragRef,
 	isPanRef,
+	autoRotate,
 }: SceneProps) {
 	const matRef = useRef<THREE.PointsMaterial>(null);
 	const { camera } = useThree();
@@ -164,7 +167,7 @@ function Scene({
 	}, [depthMap, imageUrl, bbox, geo]);
 
 	useFrame(() => {
-		if (!isDragRef.current && !isPanRef.current) {
+		if (autoRotate && !isDragRef.current && !isPanRef.current) {
 			rotYRef.current += 0.004;
 		}
 		const r = zoomRef.current;
@@ -232,7 +235,7 @@ function Scene({
 }
 
 const PointCloudViewer = forwardRef<PointCloudViewerHandle, Props>(
-	function PointCloudViewer({ depthMap, imageUrl, bbox }, ref) {
+	function PointCloudViewer({ depthMap, imageUrl, bbox, autoRotate = true }, ref) {
 		const wrapRef = useRef<HTMLDivElement>(null);
 		const isDragRef = useRef(false);
 		const isPanRef = useRef(false);
@@ -320,6 +323,7 @@ const PointCloudViewer = forwardRef<PointCloudViewerHandle, Props>(
 						panYRef={panYRef}
 						isDragRef={isDragRef}
 						isPanRef={isPanRef}
+						autoRotate={autoRotate}
 					/>
 				</Canvas>
 			</div>
