@@ -17,7 +17,7 @@ function AnalysisReport({ stats, selectedUnit = "m", isLoading }: Props) {
 	}[] = [
 		{
 			key: "rugosity",
-			label: "Rugosity",
+			label: "Gradient Rugosity",
 			format: (v) => v.toFixed(3),
 			unit: "",
 			desc: "Ratio of surface area to planar area",
@@ -60,7 +60,9 @@ function AnalysisReport({ stats, selectedUnit = "m", isLoading }: Props) {
 										<span className={styles.skeleton} />
 									</td>
 									<td className={`${styles.td} ${styles.tdDesc}`}>
-										<span className={`${styles.skeleton} ${styles.skeletonWide}`} />
+										<span
+											className={`${styles.skeleton} ${styles.skeletonWide}`}
+										/>
 									</td>
 								</tr>
 							);
