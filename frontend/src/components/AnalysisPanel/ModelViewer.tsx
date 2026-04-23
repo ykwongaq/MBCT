@@ -1,11 +1,14 @@
 import { useState, useRef } from "react";
 import MeshViewer, { type MeshViewerHandle } from "./MeshViewer";
-import PointCloudViewer, { type PointCloudViewerHandle } from "./PointCloudViewer";
+import PointCloudViewer, {
+	type PointCloudViewerHandle,
+} from "./PointCloudViewer";
+import DepthMapViewer, { type DepthMapViewerHandle } from "./DepthMapViewer";
 import styles from "./ModelViewer.module.css";
 import type { DepthMap } from "../../types/DepthMap";
 import type { BBox } from "../../types/BBox";
 
-type ViewMode = "mesh" | "pointcloud";
+type ViewMode = "mesh" | "pointcloud" | "depthmap";
 
 interface Props {
 	depthMap?: DepthMap;
@@ -15,14 +18,16 @@ interface Props {
 }
 
 function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
-	const [viewMode, setViewMode] = useState<ViewMode>("mesh");
+	const [viewMode, setViewMode] = useState<ViewMode>("pointcloud");
 	const [autoRotate, setAutoRotate] = useState(true);
 	const meshRef = useRef<MeshViewerHandle>(null);
 	const pointCloudRef = useRef<PointCloudViewerHandle>(null);
+	const depthMapRef = useRef<DepthMapViewerHandle>(null);
 
 	const onReset = () => {
 		if (viewMode === "mesh") meshRef.current?.reset();
-		else pointCloudRef.current?.reset();
+		else if (viewMode === "pointcloud") pointCloudRef.current?.reset();
+		else depthMapRef.current?.reset();
 	};
 
 	return (
@@ -31,16 +36,22 @@ function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 				<span className={styles.title}>3D Viewer</span>
 				<div className={styles.toggleGroup}>
 					<button
+						className={`${styles.toggleBtn} ${viewMode === "pointcloud" ? styles.toggleBtnActive : ""}`}
+						onClick={() => setViewMode("pointcloud")}
+					>
+						Point Cloud
+					</button>
+					<button
 						className={`${styles.toggleBtn} ${viewMode === "mesh" ? styles.toggleBtnActive : ""}`}
 						onClick={() => setViewMode("mesh")}
 					>
 						Mesh
 					</button>
 					<button
-						className={`${styles.toggleBtn} ${viewMode === "pointcloud" ? styles.toggleBtnActive : ""}`}
-						onClick={() => setViewMode("pointcloud")}
+						className={`${styles.toggleBtn} ${viewMode === "depthmap" ? styles.toggleBtnActive : ""}`}
+						onClick={() => setViewMode("depthmap")}
 					>
-						Point Cloud
+						Depth Map
 					</button>
 				</div>
 				<span className={styles.hint}>
@@ -64,7 +75,7 @@ function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 						<span className={styles.loadingLabel}>Estimating…</span>
 					</div>
 				)}
-				{viewMode === "mesh" ? (
+				{viewMode === "mesh" && (
 					<MeshViewer
 						ref={meshRef}
 						depthMap={depthMap}
@@ -72,12 +83,20 @@ function ModelViewer({ depthMap, imageUrl, bbox, isLoading }: Props) {
 						bbox={bbox}
 						autoRotate={autoRotate}
 					/>
-				) : (
+				)}
+				{viewMode === "pointcloud" && (
 					<PointCloudViewer
 						ref={pointCloudRef}
 						depthMap={depthMap}
 						imageUrl={imageUrl}
 						bbox={bbox}
+						autoRotate={autoRotate}
+					/>
+				)}
+				{viewMode === "depthmap" && (
+					<DepthMapViewer
+						ref={depthMapRef}
+						depthMap={depthMap}
 						autoRotate={autoRotate}
 					/>
 				)}
