@@ -106,7 +106,12 @@ function ModelViewer({
 						<span className={styles.loadingLabel}>Estimating…</span>
 					</div>
 				)}
-				{viewMode === "mesh" && (
+				{!depthMap && !isLoading && (
+					<div className={styles.emptyOverlay}>
+						<span className={styles.emptyLabel}>No depth map available</span>
+					</div>
+				)}
+				{viewMode === "mesh" && depthMap && (
 					<MeshViewer
 						ref={meshRef}
 						depthMap={depthMap}
@@ -115,7 +120,7 @@ function ModelViewer({
 						autoRotate={autoRotate}
 					/>
 				)}
-				{viewMode === "pointcloud" && (
+				{viewMode === "pointcloud" && depthMap && (
 					<PointCloudViewer
 						ref={pointCloudRef}
 						depthMap={depthMap}
@@ -124,7 +129,7 @@ function ModelViewer({
 						autoRotate={autoRotate}
 					/>
 				)}
-				{viewMode === "depthmap" && (
+				{viewMode === "depthmap" && depthMap && (
 					<DepthMapViewer
 						ref={depthMapRef}
 						depthMap={depthMap}
