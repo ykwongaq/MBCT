@@ -138,11 +138,10 @@ function ImagePanel({ onEstimate }: Props) {
 			<div className={styles.sectionHeader}>
 				<h2 className={styles.sectionTitle}>Image Analysis</h2>
 				<p className={styles.sectionDesc}>
-					Upload top-down vertical images of benthic habitats to estimate
-					structural complexity metrics. <br /> Drag the bounding box to adjust
-					the area of interest. <br /> To enable colony height estimation, click
-					on the image to define at least two reference points for scale
-					calibration.
+					Upload vertically-oriented, top-down photos of underwater habitats to
+					measure structural complexity. <br /> Drag the bounding box to select
+					the area you want to analyze. <br /> Mark at least two reference points
+					with a known real-world distance so we can calculate colony height.
 				</p>
 			</div>
 
