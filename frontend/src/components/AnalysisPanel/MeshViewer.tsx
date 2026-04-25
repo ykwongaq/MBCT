@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import type { WebGLRenderer } from "three";
 import * as THREE from "three";
 import styles from "./MeshViewer.module.css";
 import type { DepthMap } from "../../types/DepthMap";
@@ -7,6 +8,7 @@ import type { BBox } from "../../types/BBox";
 
 export interface MeshViewerHandle {
 	reset: () => void;
+	capture: () => string | undefined;
 }
 
 interface Props {
@@ -124,6 +126,24 @@ interface SceneProps {
 	isDragRef: React.RefObject<boolean>;
 	isPanRef: React.RefObject<boolean>;
 	autoRotate?: boolean;
+}
+
+function GlCapture({
+	glRef,
+	sceneRef,
+	cameraRef,
+}: {
+	glRef: React.RefObject<WebGLRenderer | null>;
+	sceneRef: React.RefObject<THREE.Scene | null>;
+	cameraRef: React.RefObject<THREE.Camera | null>;
+}) {
+	const { gl, scene, camera } = useThree();
+	useEffect(() => {
+		glRef.current = gl;
+		sceneRef.current = scene;
+		cameraRef.current = camera;
+	}, [gl, scene, camera, glRef, sceneRef, cameraRef]);
+	return null;
 }
 
 function Scene({
@@ -275,6 +295,9 @@ const MeshViewer = forwardRef<MeshViewerHandle, Props>(function MeshViewer(
 	const zoomRef = useRef(3.2);
 	const panXRef = useRef(0);
 	const panYRef = useRef(0);
+	const glRef = useRef<WebGLRenderer | null>(null);
+	const sceneRef = useRef<THREE.Scene | null>(null);
+	const cameraRef = useRef<THREE.Camera | null>(null);
 
 	useImperativeHandle(ref, () => ({
 		reset() {
@@ -283,6 +306,26 @@ const MeshViewer = forwardRef<MeshViewerHandle, Props>(function MeshViewer(
 			zoomRef.current = 3.2;
 			panXRef.current = 0;
 			panYRef.current = 0;
+		},
+		capture() {
+			const gl = glRef.current;
+			const scene = sceneRef.current;
+			const camera = cameraRef.current;
+			if (!gl || !scene || !camera) return undefined;
+
+			const origW = gl.domElement.width;
+			const origH = gl.domElement.height;
+			gl.setSize(origW * 4, origH * 4, false);
+			gl.render(scene, camera);
+			const dataUrl = gl.domElement.toDataURL("image/png");
+			gl.setSize(origW, origH, false);
+
+			const a = document.createElement("a");
+			a.href = dataUrl;
+			a.download = `screenshot-mesh-${Date.now()}.png`;
+			a.click();
+
+			return dataUrl;
 		},
 	}));
 
@@ -340,8 +383,9 @@ const MeshViewer = forwardRef<MeshViewerHandle, Props>(function MeshViewer(
 				style={{ position: "absolute", inset: 0 }}
 				frameloop="always"
 				camera={{ position: [0, 1.5, 3.2], fov: 45, near: 0.01, far: 100 }}
-				gl={{ antialias: true, alpha: true }}
+				gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
 			>
+				<GlCapture glRef={glRef} sceneRef={sceneRef} cameraRef={cameraRef} />
 				<Scene
 					depthMap={depthMap}
 					imageUrl={imageUrl}

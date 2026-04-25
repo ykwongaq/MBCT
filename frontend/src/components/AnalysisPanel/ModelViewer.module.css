@@ -137,6 +137,23 @@
 	color: rgba(255, 255, 255, 0.75);
 }
 
+.captureBtn {
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.45);
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 4px;
+	padding: 3px 9px;
+	cursor: pointer;
+	letter-spacing: 0.2px;
+	transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.captureBtn:hover {
+	background: rgba(255, 255, 255, 0.12);
+	color: rgba(255, 255, 255, 0.75);
+}
+
 .body {
 	flex: 1;
 	min-height: 0;

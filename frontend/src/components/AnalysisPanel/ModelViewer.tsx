@@ -46,6 +46,12 @@ function ModelViewer({
 		else depthMapRef.current?.reset();
 	};
 
+	const onCapture = () => {
+		if (viewMode === "mesh") meshRef.current?.capture();
+		else if (viewMode === "pointcloud") pointCloudRef.current?.capture();
+		else depthMapRef.current?.capture();
+	};
+
 	return (
 		<div className={styles.viewer}>
 			<div className={styles.header}>
@@ -97,6 +103,13 @@ function ModelViewer({
 				</button>
 				<button className={styles.resetBtn} onClick={onReset}>
 					Reset
+				</button>
+				<button
+					className={styles.captureBtn}
+					onClick={onCapture}
+					title="Capture screenshot"
+				>
+					Capture
 				</button>
 			</div>
 			<div className={styles.body}>
