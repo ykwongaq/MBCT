@@ -1,13 +1,15 @@
 import styles from "./AnalysisReport.module.css";
 import type { Statistic } from "../../types/Statistic";
+import * as XLSX from "xlsx";
 
 interface Props {
 	stats: Statistic;
 	selectedUnit?: "cm" | "m" | "mm";
 	isLoading?: boolean;
+	imageName?: string;
 }
 
-function AnalysisReport({ stats, selectedUnit = "m", isLoading }: Props) {
+function AnalysisReport({ stats, selectedUnit = "m", isLoading, imageName }: Props) {
 	const METRICS: {
 		key: keyof Statistic;
 		label: string;
@@ -37,10 +39,54 @@ function AnalysisReport({ stats, selectedUnit = "m", isLoading }: Props) {
 			desc: "Maximum vertical extent",
 		},
 	];
+	const handleExport = () => {
+		const now = new Date();
+		const dateTimeStr = now.toLocaleString();
+
+		const data = [
+			{ Field: "Image Filename", Value: imageName || "" },
+			{ Field: "Export Date and Time", Value: dateTimeStr },
+			{ Field: "", Value: "" },
+			{ Field: "Metric", Value: "Value" },
+			{
+				Field: "Gradient Rugosity",
+				Value: stats.rugosity !== undefined ? stats.rugosity.toFixed(3) : "N/A",
+			},
+			{
+				Field: "Fractal Dimension",
+				Value:
+					stats.fractalDimension !== undefined
+						? stats.fractalDimension.toFixed(3)
+						: "N/A",
+			},
+			{
+				Field: "Colony Height",
+				Value:
+					stats.colonyHeight !== undefined
+						? `${stats.colonyHeight.toFixed(2)} ${selectedUnit}`
+						: "NaN",
+			},
+		];
+
+		const ws = XLSX.utils.json_to_sheet(data, { header: ["Field", "Value"] });
+		const wb = XLSX.utils.book_new();
+		XLSX.utils.book_append_sheet(wb, ws, "Analysis Report");
+		XLSX.writeFile(wb, `analysis_report_${imageName || "export"}.xlsx`);
+	};
+
 	return (
 		<div className={styles.report}>
 			<div className={styles.reportHeader}>
 				<span className={styles.reportTitle}>Complexity Metrics</span>
+				{!isLoading && (
+					<button
+						className={styles.exportButton}
+						onClick={handleExport}
+						type="button"
+					>
+						Export
+					</button>
+				)}
 			</div>
 			<table className={styles.table}>
 				<thead>

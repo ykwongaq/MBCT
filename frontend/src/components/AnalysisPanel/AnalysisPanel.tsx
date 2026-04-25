@@ -236,6 +236,7 @@ function AnalysisPanel() {
 						stats={stats ?? { rugosity: 0, fractalDimension: 0 }}
 						selectedUnit={currentData?.selectedUnit}
 						isLoading={isLoading}
+						imageName={currentData?.image.imageName}
 					/>
 				)}
 			</div>
