@@ -7,9 +7,8 @@ import type { Image as AppImage } from "../../types/Image";
 import ImageSlideShow from "./ImageSlideShow";
 import ImageCollectionBar from "./ImageCollectionBar";
 import ImageDropArea from "./ImageDropArea";
-import EstimateButton from "./EstimateButton";
-import AddPointButton from "./AddPointButton";
-import ClearPointsButton from "./ClearPointsButton";
+import Button from "../../components/common/ImagePanel/Button";
+import { TrashIcon, TargetIcon, BarChartIcon } from "./icons";
 import type { BBox } from "../../types/BBox";
 
 interface Props {
@@ -170,7 +169,8 @@ function ImagePanel({ onEstimate }: Props) {
 
 			{dataList.length > 0 && (
 				<div className={styles.actions}>
-					<ClearPointsButton
+					<Button
+						variant="danger"
 						disabled={
 							(dataList.find((d) => d.id === currentImageId)?.referencePoints
 								?.length ?? 0) === 0
@@ -181,17 +181,39 @@ function ImagePanel({ onEstimate }: Props) {
 								payload: { id: currentImageId! },
 							})
 						}
-					/>
-					<AddPointButton
-						isEditing={annotationSessionState.isEditingReferencePoints}
+						title="Clear all reference points"
+						icon={<TrashIcon />}
+					>
+						Clear Points
+					</Button>
+					<Button
+						variant="default"
+						active={annotationSessionState.isEditingReferencePoints}
 						onClick={() =>
 							annotationSessionDispatch({
 								type: "TOGGLE_IS_EIDITING_REFERENCE_POINT",
 								payload: {},
 							})
 						}
-					/>
-					<EstimateButton onClick={handleEstimate} loading={false} />
+						title={
+							annotationSessionState.isEditingReferencePoints
+								? "Stop adding points"
+								: "Add reference points"
+						}
+						icon={<TargetIcon />}
+					>
+						{annotationSessionState.isEditingReferencePoints
+							? "Stop Adding"
+							: "Add Point"}
+					</Button>
+					<Button
+						variant="primary"
+						onClick={handleEstimate}
+						loading={false}
+						icon={<BarChartIcon />}
+					>
+						Estimate
+					</Button>
 				</div>
 			)}
 

@@ -1,0 +1,11 @@
+.bboxRect {
+	fill: rgba(251, 146, 60, 0.35);
+	stroke: rgb(251, 146, 60);
+	stroke-width: 3;
+}
+
+.handle {
+	fill: white;
+	stroke: rgb(251, 146, 60);
+	stroke-width: 2;
+}

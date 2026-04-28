@@ -1,4 +1,6 @@
 import styles from "./ImageCollectionBar.module.css";
+import Thumbnail from "../common/ImagePanel/Thumbnail";
+import { PlusIcon } from "./icons";
 import type { Data } from "../../types/Data";
 
 interface ImageCollectionBarProps {
@@ -17,18 +19,12 @@ function ImageCollectionBar({
 	return (
 		<div className={styles.thumbnailRow}>
 			{dataList.map((data) => (
-				<button
+				<Thumbnail
 					key={data.id}
-					className={`${styles.thumbnail} ${data.id === currentImageId ? styles.thumbnailActive : ""}`}
+					data={data}
+					isActive={data.id === currentImageId}
 					onClick={() => onSelectImage(data.id)}
-					title={data.image.imageName}
-				>
-					<img
-						src={data.image.imageUrl}
-						alt={data.image.imageName}
-						className={styles.thumbnailImg}
-					/>
-				</button>
+				/>
 			))}
 			<button
 				className={styles.addMoreBtn}
@@ -36,18 +32,7 @@ function ImageCollectionBar({
 				aria-label="Add more images"
 				title="Add more images"
 			>
-				<svg
-					width="22"
-					height="22"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="2"
-					strokeLinecap="round"
-				>
-					<line x1="12" y1="5" x2="12" y2="19" />
-					<line x1="5" y1="12" x2="19" y2="12" />
-				</svg>
+				<PlusIcon size={22} />
 			</button>
 		</div>
 	);

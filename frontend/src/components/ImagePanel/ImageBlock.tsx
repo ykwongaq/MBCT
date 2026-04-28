@@ -5,6 +5,8 @@ import type { BBox } from "../../types/BBox";
 import type { Point } from "../../types/Point";
 import { useProject } from "../../contexts/ProjectContext";
 import { useAnnotationSession } from "../../contexts/AnnotationSessionContext";
+import ReferencePointPopUp from "./ReferencePointPopUp";
+import RectangleBox from "./RectangleBox";
 
 interface ImageBlockProps {
 	data: Data;
@@ -21,7 +23,8 @@ interface OverlayRect {
 export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 	const { projectDispatch } = useProject();
 	const { annotationSessionState } = useAnnotationSession();
-	const isEditingReferencePoints = annotationSessionState.isEditingReferencePoints;
+	const isEditingReferencePoints =
+		annotationSessionState.isEditingReferencePoints;
 
 	const imgRef = useRef<HTMLImageElement>(null);
 	const svgRef = useRef<SVGSVGElement>(null);
@@ -39,7 +42,6 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 	const [isDragging, setIsDragging] = useState(false);
 	const [dragBox, setDragBox] = useState<BBox | null>(null);
 	const [selectedPointId, setSelectedPointId] = useState<number | null>(null);
-	const [editingDistance, setEditingDistance] = useState<string>("");
 
 	useEffect(() => {
 		onBBoxChangeRef.current = onBBoxChange;
@@ -49,13 +51,6 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 	useEffect(() => {
 		if (!isEditingReferencePoints) setSelectedPointId(null);
 	}, [isEditingReferencePoints]);
-
-	// Sync editing input when selected point changes
-	useEffect(() => {
-		if (selectedPointId === null) return;
-		const rp = (data.referencePoints ?? []).find((r) => r.id === selectedPointId);
-		if (rp) setEditingDistance(String(rp.distance));
-	}, [selectedPointId, data.referencePoints]);
 
 	const computeOverlay = () => {
 		const img = imgRef.current;
@@ -130,7 +125,10 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 		};
 	}, [isDragging]);
 
-	const getSvgPoint = (e: React.MouseEvent<SVGSVGElement>): Point | null => {
+	const getSvgPoint = (e: {
+		clientX: number;
+		clientY: number;
+	}): Point | null => {
 		const svg = svgRef.current;
 		if (!svg) return null;
 		const pt = svg.createSVGPoint();
@@ -172,46 +170,20 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 		setSelectedPointId((prev) => (prev === rpId ? null : rpId));
 	};
 
-	const handleDistanceCommit = (rpId: number) => {
-		const val = parseFloat(editingDistance);
-		if (isNaN(val) || val < 0) return;
-		projectDispatch({
-			type: "UPDATE_REFERENCE_POINT",
-			payload: { id: data.id, referencePointId: rpId, distance: val },
-		});
-	};
-
-	const handleUnitChange = (newUnit: "cm" | "m" | "mm") => {
-		projectDispatch({
-			type: "UPDATE_UNIT",
-			payload: { id: data.id, newUnit },
-		});
-	};
-
-	const handleDeletePoint = (rpId: number) => {
-		projectDispatch({
-			type: "REMOVE_REFERENCE_POINT",
-			payload: { id: data.id, referencePointId: rpId },
-		});
-		setSelectedPointId(null);
-	};
-
-	// Convert SVG image coordinates to pixels within the imageBlock div
-	const toPixel = (x: number, y: number) => ({
-		px: overlayRect.left + (x / data.image.imageWidth) * overlayRect.width,
-		py: overlayRect.top + (y / data.image.imageHeight) * overlayRect.height,
-	});
-
 	const currentBox = isDragging ? dragBox : data.bbox;
 	const referencePoints = data.referencePoints ?? [];
 	const selectedUnit = data.selectedUnit;
-	const selectedPoint = referencePoints.find((r) => r.id === selectedPointId) ?? null;
+	const selectedPoint =
+		referencePoints.find((r) => r.id === selectedPointId) ?? null;
 
 	// Marker radius in SVG coords (scaled so it appears ~8px on screen)
 	const markerR =
 		overlayRect.width > 0
 			? (10 / overlayRect.width) * data.image.imageWidth
 			: 10;
+
+	const handleRadius =
+		overlayRect.width > 0 ? (6 / overlayRect.width) * data.image.imageWidth : 6;
 
 	return (
 		<div className={styles.imageBlock}>
@@ -235,17 +207,6 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 				onMouseDown={handleMouseDown}
 				onClick={handleSvgClick}
 			>
-				{currentBox && (
-					<rect
-						x={currentBox.x_top_left}
-						y={currentBox.y_top_left}
-						width={currentBox.width}
-						height={currentBox.height}
-						fill="rgba(251, 146, 60, 0.35)"
-						stroke="rgb(251, 146, 60)"
-						strokeWidth="3"
-					/>
-				)}
 				{referencePoints.map((rp) => {
 					const isSelected = rp.id === selectedPointId;
 					return (
@@ -265,90 +226,27 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 						</g>
 					);
 				})}
+				{currentBox && (
+					<RectangleBox
+						bbox={currentBox}
+						onChange={onBBoxChange}
+						getSvgPoint={getSvgPoint}
+						interactive={!isEditingReferencePoints && !isDragging}
+						handleRadius={handleRadius}
+					/>
+				)}
 			</svg>
 
-			{selectedPoint && (() => {
-				const { px, py } = toPixel(selectedPoint.point.x, selectedPoint.point.y);
-				const popupW = 210;
-				const popupH = 130;
-				const margin = 8;
-
-				// Prefer positioning to the right, flip left if it would overflow
-				let left = px + margin;
-				if (overlayRect.width > 0 && left + popupW > overlayRect.left + overlayRect.width) {
-					left = px - popupW - margin;
-				}
-				// Prefer positioning below, flip up if it would overflow
-				let top = py + margin;
-				if (overlayRect.height > 0 && top + popupH > overlayRect.top + overlayRect.height) {
-					top = py - popupH - margin;
-				}
-
-				const rpIndex = referencePoints.findIndex((r) => r.id === selectedPoint.id);
-
-				return (
-					<div
-						className={styles.popup}
-						style={{ left, top }}
-						onMouseDown={(e) => e.stopPropagation()}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<div className={styles.popupHeader}>
-							<span className={styles.popupTitle}>Point {rpIndex + 1}</span>
-							<button
-								className={styles.popupClose}
-								onClick={() => setSelectedPointId(null)}
-								aria-label="Close"
-							>
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-									<line x1="18" y1="6" x2="6" y2="18" />
-									<line x1="6" y1="6" x2="18" y2="18" />
-								</svg>
-							</button>
-						</div>
-
-						<div className={styles.popupRow}>
-							<label className={styles.popupLabel}>Distance</label>
-							<div className={styles.popupInputGroup}>
-								<input
-									className={styles.popupInput}
-									type="number"
-									min="0"
-									step="any"
-									value={editingDistance}
-									onChange={(e) => setEditingDistance(e.target.value)}
-									onBlur={() => handleDistanceCommit(selectedPoint.id)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") handleDistanceCommit(selectedPoint.id);
-									}}
-								/>
-								<select
-									className={styles.popupSelect}
-									value={selectedUnit}
-									onChange={(e) => handleUnitChange(e.target.value as "cm" | "m" | "mm")}
-								>
-									<option value="cm">cm</option>
-									<option value="mm">mm</option>
-									<option value="m">m</option>
-								</select>
-							</div>
-						</div>
-
-						<button
-							className={styles.popupDelete}
-							onClick={() => handleDeletePoint(selectedPoint.id)}
-						>
-							<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-								<polyline points="3 6 5 6 21 6" />
-								<path d="M19 6l-1 14H6L5 6" />
-								<path d="M10 11v6M14 11v6" />
-								<path d="M9 6V4h6v2" />
-							</svg>
-							Delete point
-						</button>
-					</div>
-				);
-			})()}
+			<ReferencePointPopUp
+				selectedPoint={selectedPoint}
+				referencePoints={referencePoints}
+				overlayRect={overlayRect}
+				imageWidth={data.image.imageWidth}
+				imageHeight={data.image.imageHeight}
+				selectedUnit={selectedUnit}
+				dataId={data.id}
+				onClose={() => setSelectedPointId(null)}
+			/>
 		</div>
 	);
 }

@@ -1,0 +1,83 @@
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 20px;
+	font-size: 14px;
+	font-weight: 500;
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
+	transition:
+		background 0.2s,
+		color 0.2s,
+		transform 0.1s,
+		box-shadow 0.2s,
+		opacity 0.2s;
+	cursor: pointer;
+}
+
+/* Default variant (outline primary) */
+.default {
+	color: var(--color-primary);
+	background: transparent;
+	border: 1.5px solid var(--color-primary);
+}
+
+.default:hover:not(:disabled) {
+	background: var(--color-primary);
+	color: #fff;
+	box-shadow: var(--shadow-md);
+}
+
+.default:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.default.active {
+	background: var(--color-primary);
+	color: #fff;
+	box-shadow: var(--shadow-md);
+}
+
+.default.active:hover:not(:disabled) {
+	background: var(--color-accent);
+	border-color: var(--color-accent);
+}
+
+/* Primary variant (solid primary) */
+.primary {
+	color: #fff;
+	background: var(--color-primary);
+	border: none;
+}
+
+.primary:hover:not(:disabled) {
+	background: var(--color-accent);
+	box-shadow: var(--shadow-md);
+}
+
+.primary:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+/* Danger variant (outline danger) */
+.danger {
+	color: var(--color-danger, #dc3545);
+	background: transparent;
+	border: 1.5px solid var(--color-danger, #dc3545);
+}
+
+.danger:hover:not(:disabled) {
+	background: var(--color-danger, #dc3545);
+	color: #fff;
+	box-shadow: var(--shadow-md);
+}
+
+.danger:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
