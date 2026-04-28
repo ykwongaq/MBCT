@@ -4,7 +4,6 @@ const METRICS = [
 	{ value: "~17%", label: "Rugosity Error" },
 	{ value: "~2%", label: "Fractal Dim. Error" },
 	{ value: "<5s", label: "Processing Time" },
-	{ value: "R²=0.83", label: "vs. Photogrammetry" },
 ];
 
 function Header() {
