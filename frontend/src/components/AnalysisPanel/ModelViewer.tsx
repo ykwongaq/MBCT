@@ -7,6 +7,7 @@ import DepthMapViewer, { type DepthMapViewerHandle } from "./DepthMapViewer";
 import styles from "./ModelViewer.module.css";
 import type { DepthMap } from "../../types/DepthMap";
 import type { BBox } from "../../types/BBox";
+import type { ReferencePoint } from "../../types/ReferencePoint";
 import type { DepthModelName } from "../../types/DepthModelName";
 import { DEPTH_MODEL_NAMES } from "../../types/DepthModelName";
 
@@ -16,6 +17,7 @@ interface Props {
 	depthMap?: DepthMap;
 	imageUrl?: string;
 	bbox?: BBox;
+	referencePoints?: ReferencePoint[];
 	isLoading?: boolean;
 	modelName?: DepthModelName;
 	onModelChange?: (modelName: DepthModelName) => void;
@@ -30,6 +32,7 @@ function ModelViewer({
 	depthMap,
 	imageUrl,
 	bbox,
+	referencePoints,
 	isLoading,
 	modelName,
 	onModelChange,
@@ -130,6 +133,7 @@ function ModelViewer({
 						depthMap={depthMap}
 						imageUrl={imageUrl}
 						bbox={bbox}
+						referencePoints={referencePoints}
 						autoRotate={autoRotate}
 					/>
 				)}
@@ -139,6 +143,7 @@ function ModelViewer({
 						depthMap={depthMap}
 						imageUrl={imageUrl}
 						bbox={bbox}
+						referencePoints={referencePoints}
 						autoRotate={autoRotate}
 					/>
 				)}
@@ -146,6 +151,8 @@ function ModelViewer({
 					<DepthMapViewer
 						ref={depthMapRef}
 						depthMap={depthMap}
+						bbox={bbox}
+						referencePoints={referencePoints}
 						autoRotate={autoRotate}
 					/>
 				)}

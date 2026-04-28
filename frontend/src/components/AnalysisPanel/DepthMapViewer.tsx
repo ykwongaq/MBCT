@@ -5,6 +5,7 @@ import * as THREE from "three";
 import styles from "./PointCloudViewer.module.css";
 import type { DepthMap } from "../../types/DepthMap";
 import type { BBox } from "../../types/BBox";
+import type { ReferencePoint } from "../../types/ReferencePoint";
 
 export interface DepthMapViewerHandle {
 	reset: () => void;
@@ -14,6 +15,7 @@ export interface DepthMapViewerHandle {
 interface Props {
 	depthMap?: DepthMap;
 	bbox?: BBox;
+	referencePoints?: ReferencePoint[];
 	autoRotate?: boolean;
 }
 
@@ -91,6 +93,8 @@ function buildPlaceholderGeometry(): THREE.BufferGeometry {
 
 interface SceneProps {
 	depthMap?: DepthMap;
+	bbox?: BBox;
+	referencePoints?: ReferencePoint[];
 	rotXRef: React.RefObject<number>;
 	rotYRef: React.RefObject<number>;
 	zoomRef: React.RefObject<number>;
@@ -116,8 +120,43 @@ function createCircleTexture(): THREE.Texture {
 	return texture;
 }
 
+function computeReferencePointPositions(
+	depthMap: DepthMap,
+	referencePoints: ReferencePoint[],
+	bbox: BBox,
+): { id: number; position: THREE.Vector3 }[] {
+	const { data, width, height } = depthMap;
+	let min = Infinity;
+	let max = -Infinity;
+	for (let i = 0; i < data.length; i++) {
+		if (data[i] < min) min = data[i];
+		if (data[i] > max) max = data[i];
+	}
+	const range = max - min || 1;
+
+	const result: { id: number; position: THREE.Vector3 }[] = [];
+	for (const rp of referencePoints) {
+		const x = Math.round(rp.point.x - bbox.x_top_left);
+		const y = Math.round(rp.point.y - bbox.y_top_left);
+		if (x < 0 || y < 0 || x >= width || y >= height) continue;
+		const idx = y * width + x;
+		const depth = 1 - (data[idx] - min) / range;
+		result.push({
+			id: rp.id,
+			position: new THREE.Vector3(
+				(x / (width - 1)) * 2 - 1,
+				depth * 0.8,
+				(y / (height - 1)) * 2 - 1,
+			),
+		});
+	}
+	return result;
+}
+
 function Scene({
 	depthMap,
+	bbox,
+	referencePoints,
 	rotXRef,
 	rotYRef,
 	zoomRef,
@@ -134,6 +173,11 @@ function Scene({
 		() => (depthMap ? buildGeometry(depthMap) : buildPlaceholderGeometry()),
 		[depthMap],
 	);
+
+	const refPointMarkers = useMemo(() => {
+		if (!depthMap || !bbox || !referencePoints?.length) return [];
+		return computeReferencePointPositions(depthMap, referencePoints, bbox);
+	}, [depthMap, referencePoints, bbox]);
 
 	useFrame(() => {
 		if (autoRotate && !isDragRef.current && !isPanRef.current) {
@@ -181,16 +225,24 @@ function Scene({
 	});
 
 	return (
-		<points geometry={geo}>
-			<pointsMaterial
-				vertexColors
-				size={0.02}
-				sizeAttenuation
-				map={circleTexture}
-				transparent
-				alphaTest={0.5}
-			/>
-		</points>
+		<>
+			<points geometry={geo}>
+				<pointsMaterial
+					vertexColors
+					size={0.02}
+					sizeAttenuation
+					map={circleTexture}
+					transparent
+					alphaTest={0.5}
+				/>
+			</points>
+			{refPointMarkers.map((rp) => (
+				<mesh key={rp.id} position={rp.position}>
+					<sphereGeometry args={[0.03, 16, 16]} />
+					<meshBasicMaterial color="#22c55e" />
+				</mesh>
+			))}
+		</>
 	);
 }
 
@@ -213,7 +265,7 @@ function GlCapture({
 }
 
 const DepthMapViewer = forwardRef<DepthMapViewerHandle, Props>(
-	function DepthMapViewer({ depthMap, autoRotate = true }, ref) {
+	function DepthMapViewer({ depthMap, bbox, referencePoints, autoRotate = true }, ref) {
 		const wrapRef = useRef<HTMLDivElement>(null);
 		const isDragRef = useRef(false);
 		const isPanRef = useRef(false);
@@ -316,6 +368,8 @@ const DepthMapViewer = forwardRef<DepthMapViewerHandle, Props>(
 					<GlCapture glRef={glRef} sceneRef={sceneRef} cameraRef={cameraRef} />
 					<Scene
 						depthMap={depthMap}
+						bbox={bbox}
+						referencePoints={referencePoints}
 						rotXRef={rotXRef}
 						rotYRef={rotYRef}
 						zoomRef={zoomRef}

@@ -220,6 +220,7 @@ function AnalysisPanel() {
 					depthMap={currentData?.depthMap}
 					imageUrl={currentData?.image.imageUrl}
 					bbox={currentData?.bbox}
+					referencePoints={currentData?.referencePoints}
 					isLoading={isLoading}
 					modelName={annotationSessionState.modelName}
 					onModelChange={(modelName) =>
