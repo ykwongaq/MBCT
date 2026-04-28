@@ -9,6 +9,8 @@ interface ImageSlideShowProps {
 	onGoToIndex: (index: number) => void;
 	onRemoveImage: (id: number) => void;
 	onBBoxChange: (id: number, bbox: BBox) => void;
+	onDragBBoxChange?: (bbox: BBox | null) => void;
+	onNewBBoxDrawn?: (bbox: BBox) => void;
 }
 
 function ImageSlideShow({
@@ -17,6 +19,8 @@ function ImageSlideShow({
 	onGoToIndex,
 	onRemoveImage,
 	onBBoxChange,
+	onDragBBoxChange,
+	onNewBBoxDrawn,
 }: ImageSlideShowProps) {
 	const currentIndex = dataList.findIndex((d) => d.id === currentImageId);
 	const current = currentIndex >= 0 ? dataList[currentIndex] : null;
@@ -49,6 +53,8 @@ function ImageSlideShow({
 						<ImageBlock
 							data={current}
 							onBBoxChange={(bbox) => onBBoxChange(current.id, bbox)}
+							onDragBBoxChange={onDragBBoxChange}
+							onNewBBoxDrawn={onNewBBoxDrawn}
 						/>
 						<div className={styles.imageInfo}>
 							<span

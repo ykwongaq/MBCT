@@ -8,6 +8,7 @@ import type { ReferencePoint } from "../types/ReferencePoint";
 import type { Data } from "../types/Data";
 export const initialProjectState: ProjectState = {
 	dataList: [],
+	bboxTemplates: [],
 };
 
 export type ProjectAction =
@@ -50,6 +51,14 @@ export type ProjectAction =
 	| {
 			type: "UPDATE_REFERENCE_POINT";
 			payload: { id: number; referencePointId: number; distance: number };
+	  }
+	| {
+			type: "ADD_BBOX_TEMPLATE";
+			payload: { bbox: BBox };
+	  }
+	| {
+			type: "REMOVE_BBOX_TEMPLATE";
+			payload: { id: number };
 	  };
 
 function addReferencePoint(
@@ -188,6 +197,24 @@ function setDepthMap(
 	};
 }
 
+function addBBoxTemplate(state: ProjectState, bbox: BBox): ProjectState {
+	const newId =
+		state.bboxTemplates.length > 0
+			? state.bboxTemplates[state.bboxTemplates.length - 1].id + 1
+			: 1;
+	return {
+		...state,
+		bboxTemplates: [...state.bboxTemplates, { id: newId, bbox }],
+	};
+}
+
+function removeBBoxTemplate(state: ProjectState, id: number): ProjectState {
+	return {
+		...state,
+		bboxTemplates: state.bboxTemplates.filter((t) => t.id !== id),
+	};
+}
+
 function setAnalysisReport(
 	state: ProjectState,
 	id: number,
@@ -244,6 +271,10 @@ export function projectReducer(
 				action.payload.referencePointId,
 				action.payload.distance,
 			);
+		case "ADD_BBOX_TEMPLATE":
+			return addBBoxTemplate(state, action.payload.bbox);
+		case "REMOVE_BBOX_TEMPLATE":
+			return removeBBoxTemplate(state, action.payload.id);
 		default:
 			return state;
 	}

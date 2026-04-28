@@ -10,6 +10,7 @@ import ImageDropArea from "./ImageDropArea";
 import Button from "../../components/common/ImagePanel/Button";
 import { TrashIcon, TargetIcon, BarChartIcon } from "./icons";
 import type { BBox } from "../../types/BBox";
+import BoundingBoxList from "./BoundingBoxList";
 
 interface Props {
 	onEstimate?: () => void;
@@ -21,6 +22,7 @@ function ImagePanel({ onEstimate }: Props) {
 		useAnnotationSession();
 
 	const [messageBoxOpen, setMessageBoxOpen] = useState(false);
+	const [liveDragBox, setLiveDragBox] = useState<BBox | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const dataList = projectState.dataList;
@@ -123,6 +125,27 @@ function ImagePanel({ onEstimate }: Props) {
 		projectDispatch({ type: "SET_BBOX", payload: { id, bbox } });
 	};
 
+	const handleNewBBoxDrawn = (bbox: BBox) => {
+		projectDispatch({ type: "ADD_BBOX_TEMPLATE", payload: { bbox } });
+	};
+
+	const handleApplyTemplate = (bbox: BBox) => {
+		if (currentImageId === null) return;
+		const current = dataList.find((d) => d.id === currentImageId);
+		if (!current) return;
+		const centered: BBox = {
+			x_top_left: (current.image.imageWidth - bbox.width) / 2,
+			y_top_left: (current.image.imageHeight - bbox.height) / 2,
+			width: bbox.width,
+			height: bbox.height,
+		};
+		projectDispatch({ type: "SET_BBOX", payload: { id: currentImageId, bbox: centered } });
+	};
+
+	const handleRemoveTemplate = (id: number) => {
+		projectDispatch({ type: "REMOVE_BBOX_TEMPLATE", payload: { id } });
+	};
+
 	const handleEstimate = () => {
 		const currentData = dataList.find((d) => d.id === currentImageId);
 		if (!currentData?.bbox) {
@@ -140,8 +163,8 @@ function ImagePanel({ onEstimate }: Props) {
 					Upload vertically-oriented, top-down photos of underwater habitats to
 					measure structural complexity. <br /> Drag the bounding box to select
 					the area you want to analyze. <br /> Mark at least two reference
-					points with a known real-world distance to the camera (vertical) so we
-					can calculate colony height.
+					points with a known real-world distance to the camera so we can
+					calculate colony height.
 				</p>
 			</div>
 
@@ -150,19 +173,29 @@ function ImagePanel({ onEstimate }: Props) {
 					<ImageDropArea fileInputRef={fileInputRef} onDropFiles={addFiles} />
 				) : (
 					<div className={styles.viewer}>
-						<ImageSlideShow
-							dataList={dataList}
-							currentImageId={currentImageId}
-							onGoToIndex={goToIndex}
-							onRemoveImage={removeImage}
-							onBBoxChange={handleBBoxChange}
-						/>
-						<ImageCollectionBar
-							dataList={dataList}
-							currentImageId={currentImageId}
-							onSelectImage={handleSelectImage}
-							onAddMore={() => fileInputRef.current?.click()}
-						/>
+						<div className={styles.mainContent}>
+							<ImageSlideShow
+								dataList={dataList}
+								currentImageId={currentImageId}
+								onGoToIndex={goToIndex}
+								onRemoveImage={removeImage}
+								onBBoxChange={handleBBoxChange}
+								onDragBBoxChange={setLiveDragBox}
+								onNewBBoxDrawn={handleNewBBoxDrawn}
+							/>
+							<ImageCollectionBar
+								dataList={dataList}
+								currentImageId={currentImageId}
+								onSelectImage={handleSelectImage}
+								onAddMore={() => fileInputRef.current?.click()}
+							/>
+							<BoundingBoxList
+								templates={projectState.bboxTemplates}
+								liveDragBox={liveDragBox}
+								onApplyTemplate={handleApplyTemplate}
+								onRemoveTemplate={handleRemoveTemplate}
+							/>
+						</div>
 					</div>
 				)}
 			</div>

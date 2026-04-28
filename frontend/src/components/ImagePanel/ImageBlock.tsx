@@ -11,6 +11,8 @@ import RectangleBox from "./RectangleBox";
 interface ImageBlockProps {
 	data: Data;
 	onBBoxChange: (bbox: BBox) => void;
+	onDragBBoxChange?: (bbox: BBox | null) => void;
+	onNewBBoxDrawn?: (bbox: BBox) => void;
 }
 
 interface OverlayRect {
@@ -20,7 +22,7 @@ interface OverlayRect {
 	height: number;
 }
 
-export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
+export default function ImageBlock({ data, onBBoxChange, onDragBBoxChange, onNewBBoxDrawn }: ImageBlockProps) {
 	const { projectDispatch } = useProject();
 	const { annotationSessionState } = useAnnotationSession();
 	const isEditingReferencePoints =
@@ -29,6 +31,8 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 	const imgRef = useRef<HTMLImageElement>(null);
 	const svgRef = useRef<SVGSVGElement>(null);
 	const onBBoxChangeRef = useRef(onBBoxChange);
+	const onDragBBoxChangeRef = useRef(onDragBBoxChange);
+	const onNewBBoxDrawnRef = useRef(onNewBBoxDrawn);
 	const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 	const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
 	const dragBoxRef = useRef<BBox | null>(null);
@@ -46,6 +50,14 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 	useEffect(() => {
 		onBBoxChangeRef.current = onBBoxChange;
 	}, [onBBoxChange]);
+
+	useEffect(() => {
+		onDragBBoxChangeRef.current = onDragBBoxChange;
+	}, [onDragBBoxChange]);
+
+	useEffect(() => {
+		onNewBBoxDrawnRef.current = onNewBBoxDrawn;
+	}, [onNewBBoxDrawn]);
 
 	// Close popup when switching off editing mode
 	useEffect(() => {
@@ -104,6 +116,7 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 			const newBox = { x_top_left: x, y_top_left: y, width, height };
 			dragBoxRef.current = newBox;
 			setDragBox(newBox);
+			onDragBBoxChangeRef.current?.(newBox);
 		};
 
 		const handleMouseUp = () => {
@@ -112,8 +125,10 @@ export default function ImageBlock({ data, onBBoxChange }: ImageBlockProps) {
 			dragStartRef.current = null;
 			setIsDragging(false);
 			setDragBox(null);
+			onDragBBoxChangeRef.current?.(null);
 			if (finalBox && finalBox.width > 2 && finalBox.height > 2) {
 				onBBoxChangeRef.current(finalBox);
+				onNewBBoxDrawnRef.current?.(finalBox);
 			}
 		};
 
