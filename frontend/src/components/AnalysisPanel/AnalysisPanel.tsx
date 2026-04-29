@@ -234,10 +234,8 @@ function AnalysisPanel() {
 			<div className={styles.reportWrap}>
 				{(isLoading || stats) && (
 					<AnalysisReport
-						stats={stats ?? { rugosity: 0, fractalDimension: 0 }}
-						selectedUnit={currentData?.selectedUnit}
+						data={currentData}
 						isLoading={isLoading}
-						imageName={currentData?.image.imageName}
 					/>
 				)}
 			</div>

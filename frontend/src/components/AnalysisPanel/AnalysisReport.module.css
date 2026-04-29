@@ -95,6 +95,11 @@
 	}
 }
 
+.exportButtonGroup {
+	display: flex;
+	gap: 8px;
+}
+
 .exportButton {
 	padding: 6px 14px;
 	font-size: 12px;
@@ -105,6 +110,7 @@
 	border-radius: var(--radius-md, 6px);
 	cursor: pointer;
 	transition: background 0.2s ease, transform 0.1s ease;
+	white-space: nowrap;
 }
 
 .exportButton:hover {
