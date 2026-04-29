@@ -57,7 +57,10 @@ function ImagePanel({ onEstimate }: Props) {
 			for (const data of dataList) {
 				URL.revokeObjectURL(data.image.imageUrl);
 			}
-			projectDispatch({ type: "LOAD_PROJECT", payload: { projectState: loaded } });
+			projectDispatch({
+				type: "LOAD_PROJECT",
+				payload: { projectState: loaded },
+			});
 			const firstId = loaded.dataList[0]?.id ?? null;
 			annotationSessionDispatch({
 				type: "SET_CURRENT_IMAGE_ID",
@@ -130,7 +133,9 @@ function ImagePanel({ onEstimate }: Props) {
 		e.target.value = "";
 	};
 
-	const handleMbctFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleMbctFileChange = async (
+		e: React.ChangeEvent<HTMLInputElement>,
+	) => {
 		if (e.target.files?.[0]) await handleLoadProjectFile(e.target.files[0]);
 		e.target.value = "";
 	};
@@ -169,7 +174,10 @@ function ImagePanel({ onEstimate }: Props) {
 			width: bbox.width,
 			height: bbox.height,
 		};
-		projectDispatch({ type: "SET_BBOX", payload: { id: currentImageId, bbox: centered } });
+		projectDispatch({
+			type: "SET_BBOX",
+			payload: { id: currentImageId, bbox: centered },
+		});
 	};
 
 	const handleRemoveTemplate = (id: number) => {
@@ -192,9 +200,7 @@ function ImagePanel({ onEstimate }: Props) {
 				<p className={styles.sectionDesc}>
 					Upload vertically-oriented, top-down photos of underwater habitats to
 					measure structural complexity. <br /> Drag the bounding box to select
-					the area you want to analyze. <br /> Mark at least two reference
-					points with a known real-world distance to the camera so we can
-					calculate colony height.
+					the area you want to analyze.
 				</p>
 			</div>
 
