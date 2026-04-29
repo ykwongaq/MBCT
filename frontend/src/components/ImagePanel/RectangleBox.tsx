@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./RectangleBox.module.css";
-import type { BBox } from "../../../types/BBox";
-import type { Point } from "../../../types/Point";
+import type { BBox } from "../../types/BBox";
+import type { Point } from "../../types/Point";
 
 type Corner = "nw" | "ne" | "sw" | "se";
 
@@ -119,8 +119,8 @@ export default function RectangleBox({
 		(e: React.MouseEvent) => {
 			e.preventDefault();
 			e.stopPropagation();
-			const corner = (e.currentTarget as SVGCircleElement)
-				.dataset.corner as Corner;
+			const corner = (e.currentTarget as SVGCircleElement).dataset
+				.corner as Corner;
 			const pt = getSvgPointRef.current(e);
 			if (!pt) return;
 
@@ -197,7 +197,9 @@ export default function RectangleBox({
 				height={box.height}
 				pointerEvents={interactive ? "all" : "none"}
 				onMouseDown={interactive ? startMove : undefined}
-				style={{ cursor: interactive ? (isDragging ? "grabbing" : "grab") : undefined }}
+				style={{
+					cursor: interactive ? (isDragging ? "grabbing" : "grab") : undefined,
+				}}
 			/>
 			{interactive &&
 				corners.map((c) => (
