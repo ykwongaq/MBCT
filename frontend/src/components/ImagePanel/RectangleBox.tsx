@@ -100,6 +100,7 @@ export default function RectangleBox({
 
 	const startMove = useCallback(
 		(e: React.MouseEvent) => {
+			if (e.button !== 0) return;
 			e.preventDefault();
 			e.stopPropagation();
 			const pt = getSvgPointRef.current(e);
@@ -117,6 +118,7 @@ export default function RectangleBox({
 
 	const startResize = useCallback(
 		(e: React.MouseEvent) => {
+			if (e.button !== 0) return;
 			e.preventDefault();
 			e.stopPropagation();
 			const corner = (e.currentTarget as SVGCircleElement).dataset

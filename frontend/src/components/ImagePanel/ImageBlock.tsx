@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./ImageBlock.module.css";
 import type { Data } from "../../types/Data";
 import type { BBox } from "../../types/BBox";
@@ -15,20 +15,18 @@ interface ImageBlockProps {
 	onNewBBoxDrawn?: (bbox: BBox) => void;
 }
 
-interface OverlayRect {
-	left: number;
-	top: number;
-	width: number;
-	height: number;
+interface ViewBox {
+	x: number;
+	y: number;
+	w: number;
+	h: number;
 }
 
 export default function ImageBlock({ data, onBBoxChange, onDragBBoxChange, onNewBBoxDrawn }: ImageBlockProps) {
 	const { projectDispatch } = useProject();
 	const { annotationSessionState } = useAnnotationSession();
-	const isEditingReferencePoints =
-		annotationSessionState.isEditingReferencePoints;
+	const isEditingReferencePoints = annotationSessionState.isEditingReferencePoints;
 
-	const imgRef = useRef<HTMLImageElement>(null);
 	const svgRef = useRef<SVGSVGElement>(null);
 	const onBBoxChangeRef = useRef(onBBoxChange);
 	const onDragBBoxChangeRef = useRef(onDragBBoxChange);
@@ -36,64 +34,122 @@ export default function ImageBlock({ data, onBBoxChange, onDragBBoxChange, onNew
 	const dragStartRef = useRef<{ x: number; y: number } | null>(null);
 	const mouseDownPosRef = useRef<{ x: number; y: number } | null>(null);
 	const dragBoxRef = useRef<BBox | null>(null);
+	const panStartRef = useRef<{
+		screenX: number;
+		screenY: number;
+		vx: number;
+		vy: number;
+		vw: number;
+		vh: number;
+		svgW: number;
+		svgH: number;
+	} | null>(null);
 
-	const [overlayRect, setOverlayRect] = useState<OverlayRect>({
-		left: 0,
-		top: 0,
-		width: 0,
-		height: 0,
-	});
+	const imageWidth = data.image.imageWidth;
+	const imageHeight = data.image.imageHeight;
+
+	const [viewBox, setViewBox] = useState<ViewBox>({ x: 0, y: 0, w: imageWidth, h: imageHeight });
+	const [svgScreenSize, setSvgScreenSize] = useState({ width: imageWidth, height: imageHeight });
 	const [isDragging, setIsDragging] = useState(false);
+	const [isPanning, setIsPanning] = useState(false);
 	const [dragBox, setDragBox] = useState<BBox | null>(null);
 	const [selectedPointId, setSelectedPointId] = useState<number | null>(null);
 
-	useEffect(() => {
-		onBBoxChangeRef.current = onBBoxChange;
-	}, [onBBoxChange]);
+	useEffect(() => { onBBoxChangeRef.current = onBBoxChange; }, [onBBoxChange]);
+	useEffect(() => { onDragBBoxChangeRef.current = onDragBBoxChange; }, [onDragBBoxChange]);
+	useEffect(() => { onNewBBoxDrawnRef.current = onNewBBoxDrawn; }, [onNewBBoxDrawn]);
 
+	// Reset viewBox when switching to a different image
 	useEffect(() => {
-		onDragBBoxChangeRef.current = onDragBBoxChange;
-	}, [onDragBBoxChange]);
-
-	useEffect(() => {
-		onNewBBoxDrawnRef.current = onNewBBoxDrawn;
-	}, [onNewBBoxDrawn]);
+		setViewBox({ x: 0, y: 0, w: imageWidth, h: imageHeight });
+	}, [data.id, imageWidth, imageHeight]);
 
 	// Close popup when switching off editing mode
 	useEffect(() => {
 		if (!isEditingReferencePoints) setSelectedPointId(null);
 	}, [isEditingReferencePoints]);
 
-	const computeOverlay = () => {
-		const img = imgRef.current;
-		if (!img || !img.naturalWidth) return;
-		const imgRect = img.getBoundingClientRect();
-		const naturalRatio = img.naturalWidth / img.naturalHeight;
-		const rectRatio = imgRect.width / imgRect.height;
-
-		let width = imgRect.width;
-		let height = imgRect.height;
-		let left = 0;
-		let top = 0;
-
-		if (naturalRatio > rectRatio) {
-			height = imgRect.width / naturalRatio;
-			top = (imgRect.height - height) / 2;
-		} else {
-			width = imgRect.height * naturalRatio;
-			left = (imgRect.width - width) / 2;
-		}
-
-		setOverlayRect({ left, top, width, height });
-	};
-
+	// Track SVG rendered size via ResizeObserver for marker scaling and popup positioning
 	useEffect(() => {
-		computeOverlay();
-		const handleResize = () => computeOverlay();
-		window.addEventListener("resize", handleResize);
-		return () => window.removeEventListener("resize", handleResize);
-	}, [data.image.imageUrl]);
+		const svg = svgRef.current;
+		if (!svg) return;
+		const ro = new ResizeObserver((entries) => {
+			const { width, height } = entries[0].contentRect;
+			if (width > 0 && height > 0) setSvgScreenSize({ width, height });
+		});
+		ro.observe(svg);
+		return () => ro.disconnect();
+	}, []);
 
+	// Wheel zoom — must use imperative addEventListener with passive:false to call preventDefault
+	useEffect(() => {
+		const svg = svgRef.current;
+		if (!svg) return;
+
+		const handleWheel = (e: WheelEvent) => {
+			e.preventDefault();
+			const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+			const pt = svg.createSVGPoint();
+			pt.x = e.clientX;
+			pt.y = e.clientY;
+			const ctm = svg.getScreenCTM();
+			if (!ctm) return;
+			const loc = pt.matrixTransform(ctm.inverse());
+
+			setViewBox((prev) => {
+				let newW = prev.w / factor;
+				let newH = prev.h / factor;
+				// Clamp zoom range to 5%–100% of the image, preserving aspect ratio
+				const minW = imageWidth * 0.05;
+				if (newW > imageWidth) { newW = imageWidth; newH = imageHeight; }
+				if (newW < minW) { newW = minW; newH = minW * (imageHeight / imageWidth); }
+				// Keep the cursor position fixed in image space
+				const fracX = (loc.x - prev.x) / prev.w;
+				const fracY = (loc.y - prev.y) / prev.h;
+				let newX = loc.x - fracX * newW;
+				let newY = loc.y - fracY * newH;
+				newX = Math.max(0, Math.min(newX, imageWidth - newW));
+				newY = Math.max(0, Math.min(newY, imageHeight - newH));
+				return { x: newX, y: newY, w: newW, h: newH };
+			});
+		};
+
+		svg.addEventListener("wheel", handleWheel, { passive: false });
+		return () => svg.removeEventListener("wheel", handleWheel);
+	}, [imageWidth, imageHeight]);
+
+	// Middle-mouse pan
+	useEffect(() => {
+		if (!isPanning) return;
+		const start = panStartRef.current;
+		if (!start) return;
+
+		const handleMouseMove = (e: MouseEvent) => {
+			const dx = e.clientX - start.screenX;
+			const dy = e.clientY - start.screenY;
+			const scaleX = start.vw / start.svgW;
+			const scaleY = start.vh / start.svgH;
+			let newX = start.vx - dx * scaleX;
+			let newY = start.vy - dy * scaleY;
+			newX = Math.max(0, Math.min(newX, imageWidth - start.vw));
+			newY = Math.max(0, Math.min(newY, imageHeight - start.vh));
+			setViewBox((prev) => ({ ...prev, x: newX, y: newY }));
+		};
+
+		const handleMouseUp = () => {
+			panStartRef.current = null;
+			setIsPanning(false);
+		};
+
+		window.addEventListener("mousemove", handleMouseMove);
+		window.addEventListener("mouseup", handleMouseUp);
+		return () => {
+			window.removeEventListener("mousemove", handleMouseMove);
+			window.removeEventListener("mouseup", handleMouseUp);
+		};
+	}, [isPanning, imageWidth, imageHeight]);
+
+	// Bbox draw drag
 	useEffect(() => {
 		if (!isDragging) return;
 		const start = dragStartRef.current;
@@ -140,10 +196,7 @@ export default function ImageBlock({ data, onBBoxChange, onDragBBoxChange, onNew
 		};
 	}, [isDragging]);
 
-	const getSvgPoint = (e: {
-		clientX: number;
-		clientY: number;
-	}): Point | null => {
+	const getSvgPoint = useCallback((e: { clientX: number; clientY: number }): Point | null => {
 		const svg = svgRef.current;
 		if (!svg) return null;
 		const pt = svg.createSVGPoint();
@@ -153,10 +206,27 @@ export default function ImageBlock({ data, onBBoxChange, onDragBBoxChange, onNew
 		if (!ctm) return null;
 		const loc = pt.matrixTransform(ctm.inverse());
 		return { x: loc.x, y: loc.y };
-	};
+	}, []);
 
 	const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
 		e.preventDefault();
+
+		if (e.button === 2) {
+			panStartRef.current = {
+				screenX: e.clientX,
+				screenY: e.clientY,
+				vx: viewBox.x,
+				vy: viewBox.y,
+				vw: viewBox.w,
+				vh: viewBox.h,
+				svgW: svgScreenSize.width,
+				svgH: svgScreenSize.height,
+			};
+			setIsPanning(true);
+			return;
+		}
+
+		if (e.button !== 0) return;
 		const loc = getSvgPoint(e);
 		if (!loc) return;
 		mouseDownPosRef.current = { x: loc.x, y: loc.y };
@@ -172,12 +242,17 @@ export default function ImageBlock({ data, onBBoxChange, onDragBBoxChange, onNew
 		if (!isEditingReferencePoints) return;
 		const loc = getSvgPoint(e);
 		if (!loc) return;
-
-		// Don't add point if clicked on an existing marker (those stop propagation)
 		projectDispatch({
 			type: "ADD_REFERENCE_POINT",
 			payload: { id: data.id, point: loc, distance: 1 },
 		});
+	};
+
+	// Double-click resets zoom to full image (only when not placing reference points)
+	const handleDoubleClick = () => {
+		if (!isEditingReferencePoints) {
+			setViewBox({ x: 0, y: 0, w: imageWidth, h: imageHeight });
+		}
 	};
 
 	const handleMarkerClick = (e: React.MouseEvent, rpId: number) => {
@@ -188,40 +263,47 @@ export default function ImageBlock({ data, onBBoxChange, onDragBBoxChange, onNew
 	const currentBox = isDragging ? dragBox : data.bbox;
 	const referencePoints = data.referencePoints ?? [];
 	const selectedUnit = data.selectedUnit;
-	const selectedPoint =
-		referencePoints.find((r) => r.id === selectedPointId) ?? null;
+	const selectedPoint = referencePoints.find((r) => r.id === selectedPointId) ?? null;
 
-	// Marker radius in SVG coords (scaled so it appears ~8px on screen)
-	const markerR =
-		overlayRect.width > 0
-			? (10 / overlayRect.width) * data.image.imageWidth
-			: 10;
+	// Marker radius in SVG coords so it always appears ~10px on screen regardless of zoom
+	const markerR = (10 / svgScreenSize.width) * viewBox.w;
+	const handleRadius = (6 / svgScreenSize.width) * viewBox.w;
 
-	const handleRadius =
-		overlayRect.width > 0 ? (6 / overlayRect.width) * data.image.imageWidth : 6;
+	// Virtual overlayRect for popup positioning: maps image coords → px relative to imageBlock.
+	// Derived so that: px = left + (x / imageWidth) * width  ==  (x - vx) / vw * svgScreenWidth
+	const popupOverlayRect = {
+		left: -(viewBox.x / viewBox.w) * svgScreenSize.width,
+		top: -(viewBox.y / viewBox.h) * svgScreenSize.height,
+		width: (imageWidth / viewBox.w) * svgScreenSize.width,
+		height: (imageHeight / viewBox.h) * svgScreenSize.height,
+	};
+
+	const svgClassName = [
+		styles.svgCanvas,
+		isEditingReferencePoints ? styles.editingMode : "",
+		isPanning ? styles.panningMode : "",
+	].filter(Boolean).join(" ");
 
 	return (
 		<div className={styles.imageBlock}>
-			<img
-				ref={imgRef}
-				src={data.image.imageUrl}
-				alt={data.image.imageName}
-				className={styles.mainImage}
-				onLoad={computeOverlay}
-			/>
 			<svg
 				ref={svgRef}
-				className={`${styles.svgOverlay} ${isEditingReferencePoints ? styles.editingMode : ""}`}
-				style={{
-					left: overlayRect.left,
-					top: overlayRect.top,
-					width: overlayRect.width,
-					height: overlayRect.height,
-				}}
-				viewBox={`0 0 ${data.image.imageWidth} ${data.image.imageHeight}`}
+				className={svgClassName}
+				viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+				width={imageWidth}
+				height={imageHeight}
 				onMouseDown={handleMouseDown}
 				onClick={handleSvgClick}
+				onDoubleClick={handleDoubleClick}
+				onContextMenu={(e) => e.preventDefault()}
 			>
+				<image
+					href={data.image.imageUrl}
+					x={0}
+					y={0}
+					width={imageWidth}
+					height={imageHeight}
+				/>
 				{referencePoints.map((rp) => {
 					const isSelected = rp.id === selectedPointId;
 					return (
@@ -255,9 +337,9 @@ export default function ImageBlock({ data, onBBoxChange, onDragBBoxChange, onNew
 			<ReferencePointPopUp
 				selectedPoint={selectedPoint}
 				referencePoints={referencePoints}
-				overlayRect={overlayRect}
-				imageWidth={data.image.imageWidth}
-				imageHeight={data.image.imageHeight}
+				overlayRect={popupOverlayRect}
+				imageWidth={imageWidth}
+				imageHeight={imageHeight}
 				selectedUnit={selectedUnit}
 				dataId={data.id}
 				onClose={() => setSelectedPointId(null)}
