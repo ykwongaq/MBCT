@@ -8,9 +8,10 @@ import ImageSlideShow from "./ImageSlideShow";
 import ImageCollectionBar from "./ImageCollectionBar";
 import ImageDropArea from "./ImageDropArea";
 import Button from "../../components/common/ImagePanel/Button";
-import { TrashIcon, TargetIcon, BarChartIcon } from "./icons";
+import { TrashIcon, TargetIcon, BarChartIcon, FolderOpenIcon } from "./icons";
 import type { BBox } from "../../types/BBox";
 import BoundingBoxList from "./BoundingBoxList";
+import { loadProject } from "../../services/LoadProjectService";
 
 interface Props {
 	onEstimate?: () => void;
@@ -24,6 +25,7 @@ function ImagePanel({ onEstimate }: Props) {
 	const [messageBoxOpen, setMessageBoxOpen] = useState(false);
 	const [liveDragBox, setLiveDragBox] = useState<BBox | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const mbctFileInputRef = useRef<HTMLInputElement>(null);
 
 	const dataList = projectState.dataList;
 	const currentImageId = annotationSessionState.currentImageId;
@@ -49,10 +51,33 @@ function ImagePanel({ onEstimate }: Props) {
 		});
 	};
 
+	const handleLoadProjectFile = async (file: File) => {
+		try {
+			const loaded = await loadProject(file);
+			for (const data of dataList) {
+				URL.revokeObjectURL(data.image.imageUrl);
+			}
+			projectDispatch({ type: "LOAD_PROJECT", payload: { projectState: loaded } });
+			const firstId = loaded.dataList[0]?.id ?? null;
+			annotationSessionDispatch({
+				type: "SET_CURRENT_IMAGE_ID",
+				payload: { imageId: firstId },
+			});
+		} catch (err) {
+			console.error("Failed to load project:", err);
+		}
+	};
+
 	const addFiles = async (files: FileList | File[]) => {
-		const imageFiles = Array.from(files).filter((f) =>
-			f.type.startsWith("image/"),
-		);
+		const allFiles = Array.from(files);
+
+		const mbctFile = allFiles.find((f) => f.name.endsWith(".mbct"));
+		if (mbctFile) {
+			await handleLoadProjectFile(mbctFile);
+			return;
+		}
+
+		const imageFiles = allFiles.filter((f) => f.type.startsWith("image/"));
 		if (imageFiles.length === 0) return;
 
 		const firstNewId =
@@ -102,6 +127,11 @@ function ImagePanel({ onEstimate }: Props) {
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.files) addFiles(e.target.files);
+		e.target.value = "";
+	};
+
+	const handleMbctFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files?.[0]) await handleLoadProjectFile(e.target.files[0]);
 		e.target.value = "";
 	};
 
@@ -170,7 +200,17 @@ function ImagePanel({ onEstimate }: Props) {
 
 			<div className={styles.card}>
 				{dataList.length === 0 ? (
-					<ImageDropArea fileInputRef={fileInputRef} onDropFiles={addFiles} />
+					<>
+						<ImageDropArea fileInputRef={fileInputRef} onDropFiles={addFiles} />
+						<div className={styles.loadProjectHint}>
+							<button
+								className={styles.loadProjectBtn}
+								onClick={() => mbctFileInputRef.current?.click()}
+							>
+								Load existing project (.mbct)
+							</button>
+						</div>
+					</>
 				) : (
 					<div className={styles.viewer}>
 						<div className={styles.mainContent}>
@@ -202,6 +242,14 @@ function ImagePanel({ onEstimate }: Props) {
 
 			{dataList.length > 0 && (
 				<div className={styles.actions}>
+					<Button
+						variant="default"
+						onClick={() => mbctFileInputRef.current?.click()}
+						icon={<FolderOpenIcon />}
+						title="Load existing project"
+					>
+						Load Project
+					</Button>
 					<Button
 						variant="danger"
 						disabled={
@@ -257,6 +305,13 @@ function ImagePanel({ onEstimate }: Props) {
 				multiple
 				className={styles.fileInput}
 				onChange={handleFileChange}
+			/>
+			<input
+				ref={mbctFileInputRef}
+				type="file"
+				accept=".mbct"
+				className={styles.fileInput}
+				onChange={handleMbctFileChange}
 			/>
 
 			<MessageBox

@@ -90,3 +90,13 @@ export function PlusIcon({ size, className }: IconProps = {}) {
 		</IconBase>
 	);
 }
+
+export function FolderOpenIcon({ size, className }: IconProps = {}) {
+	return (
+		<IconBase size={size} className={className}>
+			<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+			<polyline points="12 11 12 17" />
+			<polyline points="9 14 12 11 15 14" />
+		</IconBase>
+	);
+}

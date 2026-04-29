@@ -8,9 +8,17 @@
 
 .panelHeader {
 	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	flex-shrink: 0;
+}
+
+.panelHeaderText {
+	display: flex;
 	flex-direction: column;
 	gap: 6px;
-	flex-shrink: 0;
 }
 
 .panelTitle {
@@ -25,6 +33,43 @@
 	color: var(--color-text-muted);
 	margin: 0;
 	line-height: 1.5;
+}
+
+.downloadBtn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 14px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--color-primary);
+	background: transparent;
+	border: 1.5px solid var(--color-primary);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
+	cursor: pointer;
+	white-space: nowrap;
+	flex-shrink: 0;
+	transition:
+		background 0.2s,
+		color 0.2s,
+		box-shadow 0.2s,
+		transform 0.1s;
+}
+
+.downloadBtn:hover:not(:disabled) {
+	background: var(--color-primary);
+	color: #fff;
+	box-shadow: var(--shadow-md);
+}
+
+.downloadBtn:active:not(:disabled) {
+	transform: translateY(1px);
+}
+
+.downloadBtn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .viewerWrap {

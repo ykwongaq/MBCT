@@ -7,6 +7,7 @@ import { useProject } from "../../contexts/ProjectContext";
 import { useAnnotationSession } from "../../contexts/AnnotationSessionContext";
 import { estimate } from "../../services/EstimateService";
 import { analyzeComplexity } from "../../services/ComplexityAnalysisService";
+import { downloadProject } from "../../services/DownloadProjectService";
 import type { EstimateResult } from "../../services/EstimateService";
 import type { BBox } from "../../types/BBox";
 import type { ApiRequestHandle } from "../../types/api";
@@ -75,6 +76,7 @@ function AnalysisPanel() {
 		useAnnotationSession();
 
 	const [isLoading, setIsLoading] = useState(false);
+	const [isDownloading, setIsDownloading] = useState(false);
 	const [errorBoxOpen, setErrorBoxOpen] = useState(false);
 	const [errorMessage, setErrorMessage] = useState("");
 
@@ -206,14 +208,43 @@ function AnalysisPanel() {
 
 	const stats = currentData?.analysisReport ?? null;
 
+	function handleDownload() {
+		setIsDownloading(true);
+		downloadProject(projectState).finally(() => setIsDownloading(false));
+	}
+
 	return (
 		<section className={styles.panel}>
 			<div className={styles.panelHeader}>
-				<h2 className={styles.panelTitle}>Analysis Results</h2>
-				<p className={styles.panelDesc}>
-					3D structural complexity metrics derived from photogrammetric
-					reconstruction.
-				</p>
+				<div className={styles.panelHeaderText}>
+					<h2 className={styles.panelTitle}>Analysis Results</h2>
+					<p className={styles.panelDesc}>
+						3D structural complexity metrics derived from photogrammetric
+						reconstruction.
+					</p>
+				</div>
+				<button
+					className={styles.downloadBtn}
+					onClick={handleDownload}
+					disabled={isDownloading}
+					title="Download project as .mbct file"
+				>
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+						strokeLinecap="round"
+						strokeLinejoin="round"
+					>
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+						<polyline points="7 10 12 15 17 10" />
+						<line x1="12" y1="15" x2="12" y2="3" />
+					</svg>
+					{isDownloading ? "Downloading..." : "Download Project"}
+				</button>
 			</div>
 			<div className={styles.viewerWrap}>
 				<ModelViewer

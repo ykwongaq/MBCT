@@ -59,6 +59,10 @@ export type ProjectAction =
 	| {
 			type: "REMOVE_BBOX_TEMPLATE";
 			payload: { id: number };
+	  }
+	| {
+			type: "LOAD_PROJECT";
+			payload: { projectState: ProjectState };
 	  };
 
 function addReferencePoint(
@@ -275,6 +279,8 @@ export function projectReducer(
 			return addBBoxTemplate(state, action.payload.bbox);
 		case "REMOVE_BBOX_TEMPLATE":
 			return removeBBoxTemplate(state, action.payload.id);
+		case "LOAD_PROJECT":
+			return action.payload.projectState;
 		default:
 			return state;
 	}

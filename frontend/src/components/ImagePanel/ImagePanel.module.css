@@ -56,3 +56,24 @@
 .fileInput {
 	display: none;
 }
+
+/* Load project hint (shown below drop area in empty state) */
+.loadProjectHint {
+	display: flex;
+	justify-content: center;
+	padding: 10px 0 14px;
+}
+
+.loadProjectBtn {
+	background: none;
+	border: none;
+	color: var(--color-text-muted);
+	font-size: 13px;
+	cursor: pointer;
+	text-decoration: underline;
+	padding: 0;
+}
+
+.loadProjectBtn:hover {
+	color: var(--color-text);
+}
